@@ -1,4 +1,4 @@
-修复[哔哩哔哩 为什么拉黑](https://greasyfork.org/zh-CN/scripts/31615-bilibili-why-blocked)脚本，增加用户空间页拉黑添加原因功能
+修复[哔哩哔哩 为什么拉黑](https://greasyfork.org/zh-CN/scripts/31615-bilibili-why-blocked)脚本，增加用户空间页拉黑添加原因功能，可能有BUG，如果不工作，先刷新试试
 
 
 评论区拉黑会记录被拉黑用户评论及评论所在网址
