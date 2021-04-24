@@ -176,12 +176,12 @@
     //   toastr.info(`No items has be imported.`);
     // }
 
-    async import2(content, snackbar, jqSnackbar) {
+    async import2(content) {
       let data = null;
       try {
         data = JSON.parse(content);
       } catch (_) {
-        showSnackBar(snackbar, jqSnackbar, "这不是有效的JSON文件.");
+        showMDCSnackbar("这不是有效的JSON文件.");
         return;
       }
 
@@ -213,9 +213,7 @@
         }
 
         if (added + errors + exists > 0) {
-          showSnackBar(
-            snackbar,
-            jqSnackbar,
+          showMDCSnackbar(
             [
               `共导入 ${added + errors + exists} 项,`,
               `新增 ${added}项, 存在 ${exists}项, 错误 ${errors}项.`,
@@ -224,11 +222,14 @@
           return;
         }
       }
-      showSnackBar(snackbar, jqSnackbar, `没有项目被导入.`);
+      showMDCSnackbar(`没有项目被导入.`);
     }
   }
 
   let blockReason = new BlockController();
+  let MDCSnackbar;
+  let jQ_MDCSnackbar;
+  let MDCDialog;
 
   function xmlEscape(s) {
     return $("<div/>").text(s).html();
@@ -237,23 +238,29 @@
   let spaceRegEx = /https:\/\/space\.bilibili\.com\/[0-9]+/;
   let midFromSpaceUrlRegEx = /[0-9]+/;
 
-  function showSnackBar(snackbar, jqSnackbar, info) {
-    snackbar.close();
-    $(jqSnackbar).find(".mdc-snackbar__label").html(info);
-    snackbar.open();
+  function showMDCSnackbar(info) {
+    MDCSnackbar.close();
+    $(jQ_MDCSnackbar).find(".mdc-snackbar__label").html(info);
+    MDCSnackbar.open();
   }
 
   function onVideoPage() {
-    $("body").prepend(
-      '<div id="MDCSnackBar" class="mdc-snackbar" style="top: 0;bottom: inherit;z-index: 10001">' +
-        '<div class="mdc-snackbar__surface" role="status" aria-relevant="additions">' +
-        '<div class="mdc-snackbar__label" aria-atomic="false">Can\'t send photo.Retry in 5 seconds.</div>' +
-        '<div class="mdc-snackbar__actions" aria-atomic="true">' +
-        "</div>" +
-        "</div>" +
-        "</div>"
-    );
-    let snackbar = mdc.snackbar.MDCSnackbar.attachTo($("#MDCSnackBar")[0]);
+    $("body").ready(() => {
+      $("body").prepend(
+        '<div id="MDCSnackbar" class="mdc-snackbar" style="top: 0;bottom: inherit;z-index: 10001">' +
+          '<div class="mdc-snackbar__surface" role="status" aria-relevant="additions">' +
+          '<div class="mdc-snackbar__label" aria-atomic="false">Can\'t send photo.Retry in 5 seconds.</div>' +
+          '<div class="mdc-snackbar__actions" aria-atomic="true">' +
+          "</div>" +
+          "</div>" +
+          "</div>"
+      );
+      //JQuery prepend不太稳定，等待JQuery注入完成
+      setTimeout(() => {
+        jQ_MDCSnackbar = $("#MDCSnackbar");
+        MDCSnackbar = mdc.snackbar.MDCSnackbar.attachTo(jQ_MDCSnackbar[0]);
+      }, 0);
+    });
     let lastCommentUser = null;
     function blackButtonClickHandler(event) {
       let parents = $(event.target).parentsUntil(".list-item");
@@ -273,7 +280,7 @@
 
       if (root === null) {
         console.log(parents);
-        showSnackBar(snackbar, $("#MDCSnackBar"), "发生错误");
+        showMDCSnackbar("发生错误");
         return;
       }
       let a = root.querySelector(".user a");
@@ -289,7 +296,7 @@
       //   console.log(type);
       //   console.log(commentData);
       lastCommentUser = commentData;
-      showSnackBar(snackbar, $("#MDCSnackBar"), "用户评论信息解析完成");
+      showMDCSnackbar("用户评论信息解析完成");
     }
     function confirmBlackClickHandler() {
       if (lastCommentUser !== null) {
@@ -300,9 +307,7 @@
           relationModifyXHRResponse: (event, resultObj) => {
             // console.log(resultObj);
             if (resultObj.code === 0) {
-              showSnackBar(
-                snackbar,
-                $("#MDCSnackBar"),
+              showMDCSnackbar(
                 [
                   xmlEscape(`Blocked ${lastCommentUser.userName}`),
                   xmlEscape(`Id: ${lastCommentUser.userId}`),
@@ -317,16 +322,12 @@
                 lastCommentUser.content
               );
             } else {
-              showSnackBar(snackbar, $("#MDCSnackBar"), resultObj.message);
+              showMDCSnackbar(resultObj.message);
             }
           },
         });
       } else {
-        showSnackBar(
-          snackbar,
-          $("#MDCSnackBar"),
-          "添加拉黑理由失败</br>lastCommentUser为null"
-        );
+        showMDCSnackbar("添加拉黑理由失败</br>lastCommentUser为null");
       }
     }
     let observer = new MutationObserver((mutationRecords, instance) => {
@@ -368,34 +369,40 @@
   }
 
   function onManagePage() {
-    $("body").prepend(
-      '<div id="blackReasonDialog" class="mdc-dialog" style="z-index:20001" aria-modal="true">' +
-        '<div class="mdc-dialog__container" style="width: 100%">' +
-        '<div class="mdc-dialog__surface" style="width: 100%" role="alertdialog" aria-modal="true" aria-labelledby="my-dialog-title" aria-describedby="my-dialog-content">' +
-        '<h2 class="mdc-dialog__title" id="blackTitle">' +
-        '<a target="_blank" style="word-break: break-word"></a>' +
-        "</h2>" +
-        '<div class="mdc-dialog__content" id="blackDetails">' +
-        "</div>" +
-        '<div class="mdc-dialog__actions">' +
-        '<button id="blackReasonDialogConfirmButton" type="button" class="mdc-button mdc-dialog__button">' +
-        '<div class="mdc-button__ripple"></div>' +
-        '<span class="mdc-button__label">确认</span>' +
-        "</button>" +
-        "</div>" +
-        "</div>" +
-        "</div>" +
-        '<div class="mdc-dialog__scrim"></div></div>' +
-        '<div id="MDCSnackBar" class="mdc-snackbar" style="top: 0;bottom: inherit;z-index: 1001">' +
-        '<div class="mdc-snackbar__surface" role="status" aria-relevant="additions">' +
-        '<div class="mdc-snackbar__label" aria-atomic="false">Can\'t send photo.Retry in 5 seconds.</div>' +
-        '<div class="mdc-snackbar__actions" aria-atomic="true">' +
-        "</div>" +
-        "</div>" +
-        "</div>"
-    );
-    let dialog = mdc.dialog.MDCDialog.attachTo($(".mdc-dialog")[0]);
-    let snackbar = mdc.snackbar.MDCSnackbar.attachTo($("#MDCSnackBar")[0]);
+    $("body").ready(() => {
+      $("body").prepend(
+        '<div id="blackReasonDialog" class="mdc-dialog" style="z-index:20001" aria-modal="true">' +
+          '<div class="mdc-dialog__container" style="width: 100%">' +
+          '<div class="mdc-dialog__surface" style="width: 100%" role="alertdialog" aria-modal="true" aria-labelledby="my-dialog-title" aria-describedby="my-dialog-content">' +
+          '<h2 class="mdc-dialog__title" id="blackTitle">' +
+          '<a target="_blank" style="word-break: break-word"></a>' +
+          "</h2>" +
+          '<div class="mdc-dialog__content" id="blackDetails">' +
+          "</div>" +
+          '<div class="mdc-dialog__actions">' +
+          '<button id="blackReasonDialogConfirmButton" type="button" class="mdc-button mdc-dialog__button">' +
+          '<div class="mdc-button__ripple"></div>' +
+          '<span class="mdc-button__label">确认</span>' +
+          "</button>" +
+          "</div>" +
+          "</div>" +
+          "</div>" +
+          '<div class="mdc-dialog__scrim"></div></div>' +
+          '<div id="MDCSnackbar" class="mdc-snackbar" style="top: 0;bottom: inherit;z-index: 1001">' +
+          '<div class="mdc-snackbar__surface" role="status" aria-relevant="additions">' +
+          '<div class="mdc-snackbar__label" aria-atomic="false">Can\'t send photo.Retry in 5 seconds.</div>' +
+          '<div class="mdc-snackbar__actions" aria-atomic="true">' +
+          "</div>" +
+          "</div>" +
+          "</div>"
+      );
+      //JQuery prepend不太稳定，等待JQuery注入完成
+      setTimeout(() => {
+        jQ_MDCSnackbar = $("#MDCSnackbar");
+        MDCDialog = mdc.dialog.MDCDialog.attachTo($(".mdc-dialog")[0]);
+        MDCSnackbar = mdc.snackbar.MDCSnackbar.attachTo(jQ_MDCSnackbar[0]);
+      }, 0);
+    });
     // snackbar.open();
     $(document).on({
       relationBlackXHRResponse: function (event, blackListObj) {
@@ -446,17 +453,9 @@
                     // console.log(resultObj);
                     if (resultObj.code === 0) {
                       blockReason.removeReason($(element).attr("mid"));
-                      showSnackBar(
-                        snackbar,
-                        $("#MDCSnackBar"),
-                        "删除拉黑理由完成"
-                      );
+                      showMDCSnackbar("删除拉黑理由完成");
                     } else {
-                      showSnackBar(
-                        snackbar,
-                        $("#MDCSnackBar"),
-                        resultObj.message
-                      );
+                      showMDCSnackbar(resultObj.message);
                     }
                   },
                 });
@@ -517,7 +516,7 @@
                   $("#blackReasonDialog")
                     .find("div#blackDetails")
                     .html(reason.content);
-                  dialog.open();
+                  MDCDialog.open();
                 },
               });
             }
@@ -529,7 +528,7 @@
     });
     $("#blackReasonDialogConfirmButton").on({
       click: function () {
-        dialog.close();
+        MDCDialog.close();
       },
     });
     let observer = new MutationObserver((mutationsList, instance) => {
@@ -565,7 +564,7 @@
             let reader = new FileReader();
             reader.onload = (x) => {
               var contents = x.target.result;
-              blockReason.import2(contents, snackbar, $("#MDCSnackBar"));
+              blockReason.import2(contents);
             };
             reader.readAsText(file);
           },
@@ -577,7 +576,7 @@
             // } else {
             //   showSnackBar(
             //     snackbar,
-            //     $("#MDCSnackBar"),
+            //     $("#MDCSnackbar"),
             //     "Cannot import because of API is invalid."
             //   );
             // }
@@ -586,7 +585,7 @@
         $("#ExportDataButton").on({
           click: () => {
             blockReason.export();
-            showSnackBar(snackbar, $("#MDCSnackBar"), "导出完成");
+            showMDCSnackbar("导出完成");
           },
         });
         instance.disconnect();
@@ -605,123 +604,135 @@
       alert("Mid get failed. Script will not work");
       return;
     }
-    $("body").prepend(
-      '<div id="blackReasonDialog" class="mdc-dialog" style="z-index:20001" aria-modal="true">' +
-        '<div class="mdc-dialog__container" style="width: 100%">' +
-        '<div class="mdc-dialog__surface" style="width: 100%" role="alertdialog" aria-modal="true" aria-labelledby="my-dialog-title" aria-describedby="my-dialog-content">' +
-        '<div class="mdc-dialog__content">' +
-        '<label class="mdc-text-field mdc-text-field--outlined"  style="width: 100%">' +
-        '<span class="mdc-notched-outline">' +
-        '<span class="mdc-notched-outline__leading"></span>' +
-        '<span class="mdc-notched-outline__notch">' +
-        '<span class="mdc-floating-label" id="my-label-id">Url</span>' +
-        "</span>" +
-        '<span class="mdc-notched-outline__trailing"></span>' +
-        "</span>" +
-        '<input id="blackUrlInput" type="text" class="mdc-text-field__input" aria-labelledby="my-label-id">' +
-        "</label>" +
-        "</br>" +
-        "</br>" +
-        '<label class="mdc-text-field mdc-text-field--outlined mdc-text-field--textarea" style="width: 100%">' +
-        '<span class="mdc-notched-outline">' +
-        '<span class="mdc-notched-outline__leading"></span>' +
-        '<span class="mdc-notched-outline__notch">' +
-        '<span class="mdc-floating-label" id="my-label-id">原因</span>' +
-        "</span>" +
-        '<span class="mdc-notched-outline__trailing"></span>' +
-        "</span>" +
-        '<span class= "mdc-text-field__resizer">' +
-        '<textarea id="blackReasonTextArea" class="mdc-text-field__input" rows="8" aria-label="Label"></textarea> ' +
-        "</span>" +
-        "</label>" +
-        "</div>" +
-        '<div class="mdc-dialog__actions">' +
-        '<button id="blackReasonDialogCancelButton" type="button" class="mdc-button mdc-dialog__button">' +
-        '<div class="mdc-button__ripple"></div>' +
-        '<span class="mdc-button__label">取消</span>' +
-        "</button>" +
-        '<button id="blackReasonDialogConfirmButton" type="button" class="mdc-button mdc-dialog__button">' +
-        '<div class="mdc-button__ripple"></div>' +
-        '<span class="mdc-button__label">确认</span>' +
-        "</button>" +
-        "</div>" +
-        "</div>" +
-        "</div>" +
-        '<div class="mdc-dialog__scrim"></div></div>' +
-        '<div id="MDCSnackBar" class="mdc-snackbar" style="top: 0;bottom: inherit;z-index: 1001">' +
-        '<div class="mdc-snackbar__surface" role="status" aria-relevant="additions">' +
-        '<div class="mdc-snackbar__label" aria-atomic="false">Can\'t send photo.Retry in 5 seconds.</div>' +
-        "</div>" +
-        "</div>"
-    );
-    let snackbar = mdc.snackbar.MDCSnackbar.attachTo($("#MDCSnackBar")[0]);
-    $(".mdc-text-field").each((index, element) => {
-      mdc.textField.MDCTextField.attachTo($(element)[0]);
-    });
-    let dialog = mdc.dialog.MDCDialog.attachTo($(".mdc-dialog")[0]);
-    // console.log(dialog.scrimClickAction);
-    dialog.scrimClickAction = "";
-    $("#blackReasonDialogCancelButton").on({
-      click: function () {
-        let blackConfirmDialog = $("body>div.modal-container");
-        blackConfirmDialog.each((index, element) => {
-          if ($(element).css("display") !== "none") {
-            $(element).find("div>div>a.default")[0].click();
-          }
+    $("body").ready(() => {
+      $("body").prepend(
+        '<div id="blackReasonDialog" class="mdc-dialog" style="z-index:20001" aria-modal="true">' +
+          '<div class="mdc-dialog__container" style="width: 100%">' +
+          '<div class="mdc-dialog__surface" style="width: 100%" role="alertdialog" aria-modal="true" aria-labelledby="my-dialog-title" aria-describedby="my-dialog-content">' +
+          '<div class="mdc-dialog__content">' +
+          '<label class="mdc-text-field mdc-text-field--outlined"  style="width: 100%">' +
+          '<span class="mdc-notched-outline">' +
+          '<span class="mdc-notched-outline__leading"></span>' +
+          '<span class="mdc-notched-outline__notch">' +
+          '<span class="mdc-floating-label" id="my-label-id">Url</span>' +
+          "</span>" +
+          '<span class="mdc-notched-outline__trailing"></span>' +
+          "</span>" +
+          '<input id="blackUrlInput" type="text" class="mdc-text-field__input" aria-labelledby="my-label-id">' +
+          "</label>" +
+          "</br>" +
+          "</br>" +
+          '<label class="mdc-text-field mdc-text-field--outlined mdc-text-field--textarea" style="width: 100%">' +
+          '<span class="mdc-notched-outline">' +
+          '<span class="mdc-notched-outline__leading"></span>' +
+          '<span class="mdc-notched-outline__notch">' +
+          '<span class="mdc-floating-label" id="my-label-id">原因</span>' +
+          "</span>" +
+          '<span class="mdc-notched-outline__trailing"></span>' +
+          "</span>" +
+          '<span class= "mdc-text-field__resizer">' +
+          '<textarea id="blackReasonTextArea" class="mdc-text-field__input" rows="8" aria-label="Label"></textarea> ' +
+          "</span>" +
+          "</label>" +
+          "</div>" +
+          '<div class="mdc-dialog__actions">' +
+          '<button id="blackReasonDialogCancelButton" type="button" class="mdc-button mdc-dialog__button">' +
+          '<div class="mdc-button__ripple"></div>' +
+          '<span class="mdc-button__label">取消</span>' +
+          "</button>" +
+          '<button id="blackReasonDialogConfirmButton" type="button" class="mdc-button mdc-dialog__button">' +
+          '<div class="mdc-button__ripple"></div>' +
+          '<span class="mdc-button__label">确认</span>' +
+          "</button>" +
+          "</div>" +
+          "</div>" +
+          "</div>" +
+          '<div class="mdc-dialog__scrim"></div></div>' +
+          '<div id="MDCSnackbar" class="mdc-snackbar" style="top: 0;bottom: inherit;z-index: 1001">' +
+          '<div class="mdc-snackbar__surface" role="status" aria-relevant="additions">' +
+          '<div class="mdc-snackbar__label" aria-atomic="false">Can\'t send photo.Retry in 5 seconds.</div>' +
+          "</div>" +
+          "</div>"
+      );
+      //JQuery prepend不太稳定，等待JQuery注入完成
+      setTimeout(() => {
+        jQ_MDCSnackbar = $("#MDCSnackbar");
+        MDCSnackbar = mdc.snackbar.MDCSnackbar.attachTo(jQ_MDCSnackbar[0]);
+        $(".mdc-text-field").each((index, element) => {
+          mdc.textField.MDCTextField.attachTo($(element)[0]);
         });
-        dialog.close();
-      },
-    });
-    $("#blackReasonDialogConfirmButton").on({
-      click: function () {
-        let url = $("#blackUrlInput").val();
-        let content = $("#blackReasonTextArea").val();
-        // console.log("mid");
-        // console.log(mid);
-        // console.log("url");
-        // console.log(url);
-        // console.log("type");
-        // console.log("barrage");
-        // console.log("content");
-        // console.log(content);
-        let blackConfirmDialog = $("body>div.modal-container");
-        blackConfirmDialog.each((index, element) => {
-          if ($(element).css("display") !== "none") {
-            // console.log($(element));
-            $(element).find("div>div>a.primary")[0].click();
-            dialog.close();
-          }
+        $(".mdc-button").each((index, element) => {
+          mdc.ripple.MDCRipple.attachTo($(element)[0]);
         });
-        $(document).one({
-          relationModifyXHRResponse: (event, resultObj) => {
-            // console.log(resultObj);
-            if (resultObj.code === 0) {
-              let blackOperationLi = $(document).find(
-                "div.h-action>div.h-add-to-black>ul>li:nth-of-type(1)"
-              );
-              let followButton = $(document).find("div.h-action>span.h-follow");
-              blackOperationLi.off("click");
-              followButton.off("click");
-              blackOperationLi.on({
-                click: removeFromBlackListClickHandler,
-              });
-              followButton.on({
-                click: removeFromBlackListClickHandler,
-              });
-              blockReason.addReason(mid, url, "barrage", content);
-              showSnackBar(snackbar, $("#MDCSnackBar"), "添加拉黑理由完成");
-            } else {
-              showSnackBar(snackbar, $("#MDCSnackBar"), resultObj.message);
-            }
+        MDCDialog = mdc.dialog.MDCDialog.attachTo($(".mdc-dialog")[0]);
+        // console.log(dialog.scrimClickAction);
+        MDCDialog.scrimClickAction = "";
+        $("#blackReasonDialogCancelButton").on({
+          click: function () {
+            console.log("CLICK");
+            let blackConfirmDialog = $("body>div.modal-container");
+            blackConfirmDialog.each((index, element) => {
+              if ($(element).css("display") !== "none") {
+                $(element).find("div>div>a.default")[0].click();
+              }
+            });
+            MDCDialog.close();
           },
         });
-      },
+        $("#blackReasonDialogConfirmButton").on({
+          click: function () {
+            console.log("CLICK");
+            let url = $("#blackUrlInput").val();
+            let content = $("#blackReasonTextArea").val();
+            // console.log("mid");
+            // console.log(mid);
+            // console.log("url");
+            // console.log(url);
+            // console.log("type");
+            // console.log("barrage");
+            // console.log("content");
+            // console.log(content);
+            let blackConfirmDialog = $("body>div.modal-container");
+            blackConfirmDialog.each((index, element) => {
+              if ($(element).css("display") !== "none") {
+                // console.log($(element));
+                $(element).find("div>div>a.primary")[0].click();
+                MDCDialog.close();
+              }
+            });
+            $(document).one({
+              relationModifyXHRResponse: (event, resultObj) => {
+                // console.log(resultObj);
+                if (resultObj.code === 0) {
+                  let blackOperationLi = $(document).find(
+                    "div.h-action>div.h-add-to-black>ul>li:nth-of-type(1)"
+                  );
+                  let followButton = $(document).find(
+                    "div.h-action>span.h-follow"
+                  );
+                  blackOperationLi.off("click");
+                  followButton.off("click");
+                  blackOperationLi.on({
+                    click: removeFromBlackListClickHandler,
+                  });
+                  followButton.on({
+                    click: removeFromBlackListClickHandler,
+                  });
+                  blockReason.addReason(mid, url, "barrage", content);
+                  showMDCSnackbar("添加拉黑理由完成");
+                } else {
+                  showMDCSnackbar(resultObj.message);
+                }
+              },
+            });
+          },
+        });
+      }, 0);
     });
     function removeFromBlackListClickHandler() {
       $(document).one({
         relationModifyXHRResponse: (event, resultObj) => {
           //   console.log(resultObj);
-          snackbar.close();
           if (resultObj.code === 0) {
             let blackOperationLi = $(document).find(
               "div.h-action>div.h-add-to-black>ul>li:nth-of-type(1)"
@@ -733,15 +744,9 @@
               click: addToBlackListClickHandler,
             });
             blockReason.removeReason(mid);
-            $("#MDCSnackBar")
-              .find(".mdc-snackbar__label")
-              .html("删除拉黑理由完成");
-            snackbar.open();
+            showMDCSnackbar("删除拉黑理由完成");
           } else {
-            $("#MDCSnackBar")
-              .find(".mdc-snackbar__label")
-              .html(resultObj.message);
-            snackbar.open();
+            showMDCSnackbar(resultObj.message);
           }
         },
       });
@@ -751,7 +756,7 @@
       //   console.log("addToBlackListClickHandler");
       // mdui.alert("sdfsdfsdf")
       $("#blackUrlInput").val(document.referrer);
-      dialog.open();
+      MDCDialog.open();
       //   console.log("addToBlackListClickHandlerEnd");
       //   let url = prompt("请输入网址", document.referrer);
       //   let content = prompt("请输入原因");
