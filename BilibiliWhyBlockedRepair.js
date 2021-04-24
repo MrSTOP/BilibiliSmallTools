@@ -1,10 +1,8 @@
 // ==UserScript==
-// @name               bilibili why blocked repair
-// @name:zh-CN         哔哩哔哩 为什么拉黑 修复
+// @name:              哔哩哔哩 为什么拉黑 修复
 // @namespace          https://github.com/MrSTOP
 // @version            0.1.0.0
-// @description        recode why I block this guy.
-// @description:zh-CN  记录为什么屏蔽了此人
+// @description:       记录为什么屏蔽了此人
 // @author             MrSTOP
 // @run-at             document-start
 // @match              https://account.bilibili.com/account/blacklist
