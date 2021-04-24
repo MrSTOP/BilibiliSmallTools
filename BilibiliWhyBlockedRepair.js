@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name               哔哩哔哩 为什么拉黑 修复
 // @namespace          https://github.com/MrSTOP
-// @version            0.1.0.0
+// @version            0.1.1.0
 // @description        记录为什么屏蔽了此人
 // @author             MrSTOP
 // @run-at             document-start
@@ -65,6 +65,12 @@
 
 (function () {
   "use strict";
+
+  let MDCSnackbar;
+  let jQ_MDCSnackbar;
+  let MDCDialog;
+  // let uid = document.cookie.match(/(?<=DedeUserID=).+?(?=;)/)[0];
+  let crsfToken = document.cookie.match(/(?<=bili_jct=).+?(?=;)/)[0];
 
   GM_addStyle(GM_getResourceText("material-component-web"));
   class BlockController {
@@ -176,6 +182,46 @@
     //   toastr.info(`No items has be imported.`);
     // }
 
+    _ServerSiteBlockAsync2(id) {
+      return new Promise((resolve, reject) => {
+        $.ajax({
+          url: "//api.bilibili.com/x/relation/modify",
+          type: "post",
+          dataType: "json",
+          xhrFields: {
+            withCredentials: true,
+          },
+          data: {
+            fid: id,
+            act: 5, //1是关注，2是取关，5是拉黑，6是取消拉黑
+            re_src: 11, //?
+            jsonp: "jsonp",
+            csrf: crsfToken,
+          },
+          success: function (result, status, xhr) {
+            console.log("===============================");
+            console.log(result);
+            console.log(status);
+            console.log(xhr);
+            console.log("===============================");
+            resolve(result.code === 0);
+          },
+          error: function (xhr, status, error) {
+            console.log("===============================");
+            console.log(xhr);
+            console.log(status);
+            console.log(error);
+            console.log("===============================");
+            reject(error);
+          },
+        });
+        // Bilibili.badlistUser("", id, (e) => {
+        //   console.log(e);
+        //   resolve(e.code === 0);
+        // });
+      });
+    }
+
     async import2(content) {
       let data = null;
       try {
@@ -200,12 +246,12 @@
             "string" === typeof z.content
           ) {
             if (this.getReason(z.key) === null) {
-              //   if (await this._ServerSiteBlockAsync(z.key)) {
-              // this.addReason(z.key, z.url, z.type, z.content);
-              // added++;
-              //   } else {
-              errors++;
-              //   }
+              if (await this._ServerSiteBlockAsync2(z.key)) {
+                this.addReason(z.key, z.url, z.type, z.content);
+                added++;
+              } else {
+                errors++;
+              }
             } else {
               exists++;
             }
@@ -227,9 +273,6 @@
   }
 
   let blockReason = new BlockController();
-  let MDCSnackbar;
-  let jQ_MDCSnackbar;
-  let MDCDialog;
 
   function xmlEscape(s) {
     return $("<div/>").text(s).html();
