@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name               哔哩哔哩 为什么拉黑 修复
 // @namespace          https://github.com/MrSTOP
-// @version            0.1.1.0
+// @version            0.1.2.1
 // @description        记录为什么屏蔽了此人
 // @author             MrSTOP
 // @run-at             document-start
@@ -444,6 +444,11 @@
         jQ_MDCSnackbar = $("#MDCSnackbar");
         MDCDialog = mdc.dialog.MDCDialog.attachTo($(".mdc-dialog")[0]);
         MDCSnackbar = mdc.snackbar.MDCSnackbar.attachTo(jQ_MDCSnackbar[0]);
+        $("#blackReasonDialogConfirmButton").on({
+          click: function () {
+            MDCDialog.close();
+          },
+        });
       }, 0);
     });
     // snackbar.open();
@@ -567,11 +572,6 @@
         } else {
           alert(blackListObj.message);
         }
-      },
-    });
-    $("#blackReasonDialogConfirmButton").on({
-      click: function () {
-        MDCDialog.close();
       },
     });
     let observer = new MutationObserver((mutationsList, instance) => {
@@ -710,6 +710,7 @@
         MDCDialog = mdc.dialog.MDCDialog.attachTo($(".mdc-dialog")[0]);
         // console.log(dialog.scrimClickAction);
         MDCDialog.scrimClickAction = "";
+        MDCDialog.escapeKeyAction = "";
         $("#blackReasonDialogCancelButton").on({
           click: function () {
             console.log("CLICK");
