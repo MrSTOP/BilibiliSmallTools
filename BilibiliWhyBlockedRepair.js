@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name               哔哩哔哩 为什么拉黑 修复
 // @namespace          https://github.com/MrSTOP
-// @version            0.1.2.1
+// @version            0.2.1.3
 // @description        记录为什么屏蔽了此人
 // @author             MrSTOP
 // @run-at             document-start
@@ -19,8 +19,22 @@
 // @require            https://cdn.jsdelivr.net/npm/jquery/dist/jquery.min.js
 // @require            https://unpkg.com/material-components-web@latest/dist/material-components-web.min.js
 // @resource           material-component-web    https://unpkg.com/material-components-web@latest/dist/material-components-web.min.css
+// @resource           material-icons    https://unpkg.com/material-icons@latest/iconfont/material-icons.css
 // @noframes
 // ==/UserScript==
+//是否自动跳过充电界面 true:跳过 false:不跳过
+let SKIP_CHARGE_ENABLED = true;
+//===============================================
+//是否启用自动连播改变功能(注意以下三项设置仅在启用本设置后生效) true:启用 false:不启用
+let AUTO_PLAY_CHANGE_ENABLED = true;
+//单个视频是否启用自动连播 true:启用 false:不启用
+let SINGLE_VIDEO_AUTO_PLAY_ENABLED = false;
+//多P视频是否启用分P自动连播 true:启用 false:不启用
+let MULTIPART_VIDEO_AUTO_PLAY_ENABLED = true;
+//多P视频是否启用推荐自动连播 true:启用 false:不启用
+let MULTIPART_VIDEO_AUTO_PLAY_RECOMMEND_ENABLED = false;
+//===============================================
+
 // 监听XHR请求避免重复请求黑名单导致API被禁用
 (function (open) {
   XMLHttpRequest.prototype.open = function () {
@@ -36,7 +50,7 @@
         ) {
           // 延迟一下避免黑名单列表没加载好
           setTimeout(() => {
-            $(document).trigger("relationBlackXHRResponse", [
+            $(document).trigger("relationBlacksXHRResponse", [
               JSON.parse(this.responseText),
             ]);
           }, 500);
@@ -45,11 +59,25 @@
             "https://api.bilibili.com/x/relation/modify"
           )
         ) {
-          setTimeout(() => {
-            $(document).trigger("relationModifyXHRResponse", [
-              JSON.parse(this.responseText),
-            ]);
-          }, 500);
+          // setTimeout(() => {
+          $(document).trigger("relationModifyXHRResponse", [
+            JSON.parse(this.responseText),
+          ]);
+          // }, 500);
+        } else if (
+          this.responseURL.includes(
+            "https://api.bilibili.com/x/player/pagelist"
+          )
+        ) {
+          $(document).trigger("playerPageListXHRResponse", [
+            JSON.parse(this.responseText),
+          ]);
+        } else if (
+          this.responseURL.includes("https://api.bilibili.com/x/player/v2")
+        ) {
+          $(document).trigger("playerV2XHRResponse", [
+            JSON.parse(this.responseText),
+          ]);
         }
       }
     });
@@ -73,6 +101,7 @@
   let crsfToken = document.cookie.match(/(?<=bili_jct=).+?(?=;)/)[0];
 
   GM_addStyle(GM_getResourceText("material-component-web"));
+  GM_addStyle(GM_getResourceText("material-icons"));
   class BlockController {
     constructor() {
       this._singletonData = new SingletonData("blocked-reasons", {});
@@ -286,8 +315,81 @@
     $(jQ_MDCSnackbar).find(".mdc-snackbar__label").html(info);
     MDCSnackbar.open();
   }
-
+  let VIDEO_PAGE_PLAY_LIST_OBJ;
   function onVideoPage() {
+    let observer = new MutationObserver((mutationRecords, instance) => {
+      mutationRecords.forEach((mutationRecord) => {
+        //没有添加节点
+        if (mutationRecord.addedNodes.length === 0) {
+          return;
+        }
+        if (
+          $(".bilibili-player-electric-panel-jump-content").length !== 0 &&
+          SKIP_CHARGE_ENABLED
+        ) {
+          //console.log(mutationRecord);
+          $(".bilibili-player-electric-panel-jump-content")[0].click();
+          console.log("跳过充电");
+        }
+        mutationRecord.addedNodes.forEach((node) => {
+          // console.log(node.classList.contains("blacklist"));
+          //   if ($(node).hasClass("r-con")) {
+          //     console.log("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$");
+          //     console.log($(node));
+          //     console.log($(node).attr("class"));
+          //     console.log(
+          //       $(node)
+          //         .find(".head-right")
+          //         .before('<span class="material-icons mdc-theme--primary" style="font-size: 18px;">settings</span >')
+          //     );
+          //     console.log("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$");
+          //   }
+          if ($(node).hasClass("list-item")) {
+            $(node).find("li.blacklist").on({
+              click: blackButtonClickHandler,
+            });
+          }
+          if ($(node).hasClass("comment-bilibili-blacklist")) {
+            $(node).find("a.blacklist-confirm").on({
+              click: confirmBlackClickHandler,
+            });
+          }
+        });
+      });
+      //   let blackButton = $("div.comment-list div.opera-list>ul>li.blacklist");
+      //   if (blackButton[0]) {
+      //     blackButton.off("click", blackButtonClickHandler);
+      //     blackButton.on({
+      //       click: blackButtonClickHandler,
+      //     });
+      //   }
+      //   let blackListConfirm = $(".comment-bilibili-blacklist");
+      //   if (blackListConfirm[0]) {
+      //     blackListConfirm.off("click", confirmBlackClickHandler);
+      //     let btn = $(".comment-bilibili-blacklist .comment-bilibili-con .blacklist-confirm");
+      //     btn.on({
+      //       click: confirmBlackClickHandler,
+      //     });
+      //   }
+    });
+    observer.observe(document, {
+      childList: true,
+      subtree: true,
+    });
+
+    $("#app .r-con").ready(() => {
+      $("#app .r-con .head-right").before(
+        '<span id="AutoPlaySettingButton" class="material-icons mdc-theme--primary" style="font-size: 18px;cursor: pointer">settings</span >'
+      );
+      setTimeout(() => {
+        $("#AutoPlaySettingButton").on({
+            click: () => {
+                showMDCSnackbar("SETTING BUTTON CLICK");
+          },
+        });
+      }, 0);
+    });
+
     $("body").ready(() => {
       $("body").prepend(
         '<div id="MDCSnackbar" class="mdc-snackbar" style="top: 0;bottom: inherit;z-index: 10001">' +
@@ -304,6 +406,95 @@
         MDCSnackbar = mdc.snackbar.MDCSnackbar.attachTo(jQ_MDCSnackbar[0]);
       }, 0);
     });
+
+    $(document).on({
+      playerPageListXHRResponse: (event, playlistObj) => {
+        if (!AUTO_PLAY_CHANGE_ENABLED) {
+          return;
+        }
+        VIDEO_PAGE_PLAY_LIST_OBJ = playlistObj;
+        if (playlistObj.data.length === 1) {
+          let autoPlayButton = $("#reco_list").find(
+            ".next-play .next-button .switch-button"
+          );
+          // console.log(playNextList);
+          // console.log(autoPlayButton);
+          console.log("检测到无分P视频");
+          if (autoPlayButton.hasClass("on")) {
+            console.log("推荐自动连播处于开启状态");
+            if (!SINGLE_VIDEO_AUTO_PLAY_ENABLED) {
+              autoPlayButton.click();
+              console.log("已关闭推荐自动连播");
+            }
+          } else {
+            console.log("推荐自动连播处于关闭状态");
+            if (SINGLE_VIDEO_AUTO_PLAY_ENABLED) {
+              autoPlayButton.click();
+              console.log("已开启推荐自动连播");
+            }
+          }
+        } else {
+          let autoPlayButton = $("#multi_page").find(
+            ".next-button .switch-button"
+          );
+          // console.log(playNextList);
+          // console.log(autoPlayButton);
+          // console.log(
+          //   autoPlayButton.getElementsByClassName("switch-button")[0]
+          // );
+          // console.log(
+          //   autoPlayButton.getElementsByClassName("switch-button on")[0]
+          // );
+          console.log("检测到有分P视频");
+          if (!autoPlayButton.hasClass("on")) {
+            console.log("自动连播处于关闭状态");
+            if (MULTIPART_VIDEO_AUTO_PLAY_ENABLED) {
+              autoPlayButton.click();
+              console.log("已开启自动连播");
+            }
+          } else {
+            console.log("自动连播处于开启状态");
+            if (!MULTIPART_VIDEO_AUTO_PLAY_ENABLED) {
+              autoPlayButton.click();
+              console.log("已关闭自动连播");
+            }
+          }
+        }
+      },
+      playerV2XHRResponse: (event, v2Obj) => {
+        if (!AUTO_PLAY_CHANGE_ENABLED) {
+          return;
+        }
+        if ($("#multi_page").length === 0) {
+          return;
+        }
+        if (
+          v2Obj.data.cid ===
+          VIDEO_PAGE_PLAY_LIST_OBJ.data[
+            VIDEO_PAGE_PLAY_LIST_OBJ.data.length - 1
+          ].cid
+        ) {
+          console.log("分P视频最后一P");
+          let autoPlayButton = $("#multi_page").find(
+            ".next-button .switch-button"
+          );
+          if (!autoPlayButton.hasClass("on")) {
+            console.log("自动连播处于关闭状态");
+            if (MULTIPART_VIDEO_AUTO_PLAY_RECOMMEND_ENABLED) {
+              autoPlayButton.click();
+              console.log("已开启自动连播");
+            }
+          } else {
+            console.log("自动连播处于开启状态");
+            if (!MULTIPART_VIDEO_AUTO_PLAY_RECOMMEND_ENABLED) {
+              autoPlayButton.click();
+              console.log("已关闭自动连播");
+            }
+          }
+        }
+      },
+    });
+
     let lastCommentUser = null;
     function blackButtonClickHandler(event) {
       let parents = $(event.target).parentsUntil(".list-item");
@@ -373,45 +564,75 @@
         showMDCSnackbar("添加拉黑理由失败</br>lastCommentUser为null");
       }
     }
-    let observer = new MutationObserver((mutationRecords, instance) => {
-      mutationRecords.forEach((mutation) => {
-        mutation.addedNodes.forEach((node) => {
-          // console.log(node.classList.contains("blacklist"));
-          if ($(node).hasClass("list-item")) {
-            $(node).find("li.blacklist").on({
-              click: blackButtonClickHandler,
-            });
-          }
-          if ($(node).hasClass("comment-bilibili-blacklist")) {
-            $(node).find("a.blacklist-confirm").on({
-              click: confirmBlackClickHandler,
-            });
-          }
+  }
+
+  function onManagePage() {
+    let observer = new MutationObserver((mutationsList, instance) => {
+      let buttonDiv = $("#app>div>div>div>div.security-right-title");
+      if (buttonDiv[0]) {
+        buttonDiv.append(
+          '<div style="float: right;padding: 7px">' +
+            '<input id="ImportFileInput" type="file" hidden accept="application/json">' +
+            '<button id="ImportDataButton" class="mdc-button mdc-button--outlined">' +
+            '<span class="mdc-button__ripple"></span>' +
+            '<span class="mdc-button__label">导入</span>' +
+            "</button>" +
+            '<span style="padding: 8px"></span>' +
+            '<button id="ExportDataButton" class="mdc-button mdc-button--outlined">' +
+            '<span class="mdc-button__ripple"></span>' +
+            '<span class="mdc-button__label">导出</span>' +
+            "</button>" +
+            "</div>"
+        );
+        let importButton = mdc.ripple.MDCRipple.attachTo(
+          $("#ImportDataButton")[0]
+        );
+        let exportButton = mdc.ripple.MDCRipple.attachTo(
+          $("#ExportDataButton")[0]
+        );
+
+        $("#ImportFileInput").on({
+          change: (e) => {
+            let file = e.target.files[0];
+            if (!file) {
+              return;
+            }
+            let reader = new FileReader();
+            reader.onload = (x) => {
+              var contents = x.target.result;
+              blockReason.import2(contents);
+            };
+            reader.readAsText(file);
+          },
         });
-      });
-      //   let blackButton = $("div.comment-list div.opera-list>ul>li.blacklist");
-      //   if (blackButton[0]) {
-      //     blackButton.off("click", blackButtonClickHandler);
-      //     blackButton.on({
-      //       click: blackButtonClickHandler,
-      //     });
-      //   }
-      //   let blackListConfirm = $(".comment-bilibili-blacklist");
-      //   if (blackListConfirm[0]) {
-      //     blackListConfirm.off("click", confirmBlackClickHandler);
-      //     let btn = $(".comment-bilibili-blacklist .comment-bilibili-con .blacklist-confirm");
-      //     btn.on({
-      //       click: confirmBlackClickHandler,
-      //     });
-      //   }
+        $("#ImportDataButton").on({
+          click: () => {
+            // if (blockReason.canImport()) {
+            $("#ImportFileInput").trigger("click");
+            // } else {
+            //   showSnackBar(
+            //     snackbar,
+            //     $("#MDCSnackbar"),
+            //     "Cannot import because of API is invalid."
+            //   );
+            // }
+          },
+        });
+        $("#ExportDataButton").on({
+          click: () => {
+            blockReason.export();
+            showMDCSnackbar("导出完成");
+          },
+        });
+        instance.disconnect();
+        return;
+      }
     });
     observer.observe(document, {
       childList: true,
       subtree: true,
     });
-  }
 
-  function onManagePage() {
     $("body").ready(() => {
       $("body").prepend(
         '<div id="blackReasonDialog" class="mdc-dialog" style="z-index:20001" aria-modal="true">' +
@@ -453,7 +674,7 @@
     });
     // snackbar.open();
     $(document).on({
-      relationBlackXHRResponse: function (event, blackListObj) {
+      relationBlacksXHRResponse: function (event, blackListObj) {
         // console.log("OBJ");
         // console.log(blackListObj);
         // console.log("code");
@@ -574,74 +795,41 @@
         }
       },
     });
-    let observer = new MutationObserver((mutationsList, instance) => {
-      let buttonDiv = $("#app>div>div>div>div.security-right-title");
-      if (buttonDiv[0]) {
-        buttonDiv.append(
-          '<div style="float: right;padding: 7px">' +
-            '<input id="ImportFileInput" type="file" hidden accept="application/json">' +
-            '<button id="ImportDataButton" class="mdc-button mdc-button--outlined">' +
-            '<span class="mdc-button__ripple"></span>' +
-            '<span class="mdc-button__label">导入</span>' +
-            "</button>" +
-            '<span style="padding: 8px"></span>' +
-            '<button id="ExportDataButton" class="mdc-button mdc-button--outlined">' +
-            '<span class="mdc-button__ripple"></span>' +
-            '<span class="mdc-button__label">导出</span>' +
-            "</button>" +
-            "</div>"
-        );
-        let importButton = mdc.ripple.MDCRipple.attachTo(
-          $("#ImportDataButton")[0]
-        );
-        let exportButton = mdc.ripple.MDCRipple.attachTo(
-          $("#ExportDataButton")[0]
-        );
+  }
 
-        $("#ImportFileInput").on({
-          change: (e) => {
-            let file = e.target.files[0];
-            if (!file) {
-              return;
+  function onSpacePage() {
+    let observer = new MutationObserver((mutationRecords, instance) => {
+      mutationRecords.forEach((mutation) => {
+        mutation.addedNodes.forEach((node) => {
+          let blackOperationLi = $(node).find(
+            "div.h-action>div.h-add-to-black>ul>li:nth-of-type(1)"
+          );
+          let followButton = $(node).find("div.h-action>span.h-unfollow");
+          if (blackOperationLi[0]) {
+            if (blackOperationLi.html().includes("加入黑名单")) {
+              blackOperationLi.on({
+                click: addToBlackListClickHandler,
+              });
+            } else if (blackOperationLi.html().includes("移除黑名单")) {
+              blackOperationLi.on({
+                click: removeFromBlackListClickHandler,
+              });
+              followButton.on({
+                click: removeFromBlackListClickHandler,
+              });
+            } else {
+              showMDCSnackbar("无法识别操作，请考虑报告错误");
             }
-            let reader = new FileReader();
-            reader.onload = (x) => {
-              var contents = x.target.result;
-              blockReason.import2(contents);
-            };
-            reader.readAsText(file);
-          },
+            instance.disconnect();
+          }
         });
-        $("#ImportDataButton").on({
-          click: () => {
-            // if (blockReason.canImport()) {
-            $("#ImportFileInput").trigger("click");
-            // } else {
-            //   showSnackBar(
-            //     snackbar,
-            //     $("#MDCSnackbar"),
-            //     "Cannot import because of API is invalid."
-            //   );
-            // }
-          },
-        });
-        $("#ExportDataButton").on({
-          click: () => {
-            blockReason.export();
-            showMDCSnackbar("导出完成");
-          },
-        });
-        instance.disconnect();
-        return;
-      }
+      });
     });
     observer.observe(document, {
       childList: true,
       subtree: true,
     });
-  }
 
-  function onSpacePage() {
     let mid = midFromSpaceUrlRegEx.exec(window.location.href)[0];
     if (mid === undefined || mid === null || mid === "") {
       alert("Mid get failed. Script will not work");
@@ -815,37 +1003,6 @@
       //   console.log(content);
       //   blockReason.addReason(mid, url, "barrage", content);
     }
-    let observer = new MutationObserver((mutationRecords, instance) => {
-      mutationRecords.forEach((mutation) => {
-        mutation.addedNodes.forEach((node) => {
-          let blackOperationLi = $(node).find(
-            "div.h-action>div.h-add-to-black>ul>li:nth-of-type(1)"
-          );
-          let followButton = $(node).find("div.h-action>span.h-unfollow");
-          if (blackOperationLi[0]) {
-            if (blackOperationLi.html().includes("加入黑名单")) {
-              blackOperationLi.on({
-                click: addToBlackListClickHandler,
-              });
-            } else if (blackOperationLi.html().includes("移除黑名单")) {
-              blackOperationLi.on({
-                click: removeFromBlackListClickHandler,
-              });
-              followButton.on({
-                click: removeFromBlackListClickHandler,
-              });
-            } else {
-              alert("无法识别操作");
-            }
-            instance.disconnect();
-          }
-        });
-      });
-    });
-    observer.observe(document, {
-      childList: true,
-      subtree: true,
-    });
   }
   if (blackListRegEx.test(window.location.href)) {
     onManagePage();
