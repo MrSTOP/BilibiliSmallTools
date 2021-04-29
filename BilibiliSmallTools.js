@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name               哔哩哔哩 为什么拉黑 修复 + 小功能
+// @name               哔哩哔哩 小功能
 // @namespace          https://github.com/MrSTOP
 // @version            0.2.5.4
 // @description        记录为什么屏蔽了此人，支持导入导出。添加自动跳过充电页面功能，调整B站恶心的自动连播功能
