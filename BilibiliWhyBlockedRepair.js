@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name               哔哩哔哩 为什么拉黑 修复
 // @namespace          https://github.com/MrSTOP
-// @version            0.2.1.3
+// @version            0.2.5.3
 // @description        记录为什么屏蔽了此人
 // @author             MrSTOP
 // @run-at             document-start
@@ -23,16 +23,16 @@
 // @noframes
 // ==/UserScript==
 //是否自动跳过充电界面 true:跳过 false:不跳过
-let SKIP_CHARGE_ENABLED = true;
+// let SKIP_CHARGE_ENABLED = true;
 //===============================================
 //是否启用自动连播改变功能(注意以下三项设置仅在启用本设置后生效) true:启用 false:不启用
-let AUTO_PLAY_CHANGE_ENABLED = true;
+// let AUTO_PLAY_CHANGE_ENABLED = true;
 //单个视频是否启用自动连播 true:启用 false:不启用
-let SINGLE_VIDEO_AUTO_PLAY_ENABLED = false;
+// let SINGLE_VIDEO_AUTO_PLAY_ENABLED = false;
 //多P视频是否启用分P自动连播 true:启用 false:不启用
-let MULTIPART_VIDEO_AUTO_PLAY_ENABLED = true;
+// let MULTIPART_VIDEO_AUTO_PLAY_ENABLED = true;
 //多P视频是否启用推荐自动连播 true:启用 false:不启用
-let MULTIPART_VIDEO_AUTO_PLAY_RECOMMEND_ENABLED = false;
+// let MULTIPART_VIDEO_AUTO_PLAY_RECOMMEND_ENABLED = false;
 //===============================================
 
 // 监听XHR请求避免重复请求黑名单导致API被禁用
@@ -102,6 +102,9 @@ let MULTIPART_VIDEO_AUTO_PLAY_RECOMMEND_ENABLED = false;
 
   GM_addStyle(GM_getResourceText("material-component-web"));
   GM_addStyle(GM_getResourceText("material-icons"));
+  GM_addStyle(
+    ".mdc-list-item{height:32px;padding:20px 0px 0px 14px}.mdc-list-item__text{padding-left:10px}"
+  );
   class BlockController {
     constructor() {
       this._singletonData = new SingletonData("blocked-reasons", {});
@@ -300,8 +303,30 @@ let MULTIPART_VIDEO_AUTO_PLAY_RECOMMEND_ENABLED = false;
       showMDCSnackbar(`没有项目被导入.`);
     }
   }
+  class SettingsStorage {
+    constructor() {
+      this._singletonData = new SingletonData("settings", {
+        skipCharge: true,
+        autoPlayChange: true,
+        singleVideoAutoPlayRecommend: false,
+        multipartVideoAutoPlay: true,
+        multipartVideoAutoPlayRecommend: false,
+      });
+    }
+
+    saveSettings(settings) {
+      this._singletonData.data = settings;
+      this._singletonData.save();
+    }
+
+    loadSettings() {
+      return this._singletonData.data;
+    }
+  }
 
   let blockReason = new BlockController();
+  let settingsStorage = new SettingsStorage();
+  let currentSettings = settingsStorage.loadSettings();
 
   function xmlEscape(s) {
     return $("<div/>").text(s).html();
@@ -325,7 +350,7 @@ let MULTIPART_VIDEO_AUTO_PLAY_RECOMMEND_ENABLED = false;
         }
         if (
           $(".bilibili-player-electric-panel-jump-content").length !== 0 &&
-          SKIP_CHARGE_ENABLED
+          currentSettings.skipCharge
         ) {
           //console.log(mutationRecord);
           $(".bilibili-player-electric-panel-jump-content")[0].click();
@@ -377,39 +402,256 @@ let MULTIPART_VIDEO_AUTO_PLAY_RECOMMEND_ENABLED = false;
       subtree: true,
     });
 
-    $("#app .r-con").ready(() => {
-      $("#app .r-con .head-right").before(
-        '<span id="AutoPlaySettingButton" class="material-icons mdc-theme--primary" style="font-size: 18px;cursor: pointer">settings</span >'
-      );
-      setTimeout(() => {
-        $("#AutoPlaySettingButton").on({
-            click: () => {
-                showMDCSnackbar("SETTING BUTTON CLICK");
-          },
-        });
-      }, 0);
-    });
-
     $("body").ready(() => {
       $("body").prepend(
-        '<div id="MDCSnackbar" class="mdc-snackbar" style="top: 0;bottom: inherit;z-index: 10001">' +
-          '<div class="mdc-snackbar__surface" role="status" aria-relevant="additions">' +
-          '<div class="mdc-snackbar__label" aria-atomic="false">Can\'t send photo.Retry in 5 seconds.</div>' +
-          '<div class="mdc-snackbar__actions" aria-atomic="true">' +
-          "</div>" +
-          "</div>" +
-          "</div>"
+        `<div style="position: absolute;right: 0.5%; top: 30%">
+        <button id="OpenSettingDialogButton" class="mdc-icon-button material-icons" data-tooltip-id="AutoPlaySettingButtonTooltip" aria-label="toggle favorite" data-tooltip-id="tooltip-id">settings</button>
+        <div id="AutoPlaySettingButtonTooltip" class="mdc-tooltip" role="tooltip"  data-mdc-tooltip-persist="false" aria-hidden="true">
+        <div class= "mdc-tooltip__surface">自动播放设置</div>
+        </div>
+        </div>
+
+        <div id="AutoPlaySettingDialog" class="mdc-dialog" style="z-index: 1001">
+        <div class="mdc-dialog__container">
+        <div class="mdc-dialog__surface" role="alertdialog" aria-modal="true" aria-labelledby="AutoPlaySettingDialogTitle" aria-describedby="my-dialog-content">
+        <h2 class="mdc-dialog__title" id="AutoPlaySettingDialogTitle">自动播放设置</h2>
+        
+        <div class="mdc-dialog__content" id="">
+        <ul id="AutoPlaySettingOptionList" class="mdc-list" role="group" aria-label="List with switch items">
+        <li class="mdc-list-item" role="switch" aria-checked="false">
+        <span class="mdc-list-item__graphic">
+        <div id="SettingSkipCharge" class="mdc-switch">
+        <div class="mdc-switch__track"></div>
+        <div class="mdc-switch__thumb-underlay">
+        <div class="mdc-switch__thumb">
+        <input type="checkbox" id="SettingSkipChargeInput" class="mdc-switch__native-control">
+        </div>
+        </div>
+        </div>
+        </span>
+        <label class="mdc-list-item__text" for="SettingSkipChargeInput">是否自动跳过充电界面</label>
+        </li>
+        <li class="mdc-list-item" role="switch" tabindex="0">
+        <span class="mdc-list-item__graphic">
+        <div id="SettingAutoPlayChange" class="mdc-switch">
+        <div class="mdc-switch__track"></div>
+        <div class="mdc-switch__thumb-underlay">
+        <div class="mdc-switch__thumb">
+        <input type="checkbox" id="SettingAutoPlayChangeInput" class="mdc-switch__native-control">
+        </div>
+        </div>
+        </div>
+        </span>
+        <label class="mdc-list-item__text" for="SettingAutoPlayChangeInput">是否启用自动连播改变功能(注意以下三项设置仅在启用本设置后生效)</label>
+        </li>
+        <li class="mdc-list-item" role="switch" tabindex="1">
+        <span class="mdc-list-item__graphic">
+        <div id="SettingSingleVideoAutoPlayRecommend" class="mdc-switch">
+        <div class="mdc-switch__track"></div>
+        <div class="mdc-switch__thumb-underlay">
+        <div class="mdc-switch__thumb">
+        <input type="checkbox" id="SettingSingleVideoAutoPlayRecommendInput" class="mdc-switch__native-control">
+        </div>
+        </div>
+        </div>
+        </span>
+        <label class="mdc-list-item__text" for="SettingSingleVideoAutoPlayRecommendInput">单个视频是否启用自动连播</label>
+        </li>
+        <li class="mdc-list-item" role="switch" tabindex="2">
+        <span class="mdc-list-item__graphic">
+        <div id="SettingMultipartVideoAutoPlay" class="mdc-switch">
+        <div class="mdc-switch__track"></div>
+        <div class="mdc-switch__thumb-underlay">
+        <div class="mdc-switch__thumb">
+        <input type="checkbox" id="SettingMultipartVideoAutoPlayInput" class="mdc-switch__native-control">
+        </div>
+        </div>
+        </div>
+        </span>
+        <label class="mdc-list-item__text" for="SettingMultipartVideoAutoPlayInput">多P视频是否启用分P自动连播</label>
+        </li>
+        <li class="mdc-list-item" role="switch" tabindex="3">
+        <span class="mdc-list-item__graphic">
+        <div id="SettingMultipartVideoAutoPlayRecommend" class="mdc-switch">
+        <div class="mdc-switch__track"></div>
+        <div class="mdc-switch__thumb-underlay">
+        <div class="mdc-switch__thumb">
+        <input type="checkbox" id="SettingMultipartVideoAutoPlayRecommendInput" class="mdc-switch__native-control">
+        </div>
+        </div>
+        </div>
+        </span>
+        <label class="mdc-list-item__text" for="SettingMultipartVideoAutoPlayRecommendInput">多P视频是否启用推荐自动连播</label>
+        </li>
+        </ul>
+        <!--<ul id="AutoPlaySettingOptionList" class="mdc-list" role="group" aria-label="List with switch items">
+        <li class="mdc-list-item" role="switch" aria-checked="false">
+        <label class="mdc-list-item__text" for="SettingMultipartVideoAutoPlayRecommend">多P视频是否启用推荐自动连播</label>
+        <span class="mdc-list-item__meta">
+        <div class="mdc-switch">
+        <div class="mdc-switch__track"></div>
+        <div class="mdc-switch__thumb-underlay">
+        <div class="mdc-switch__thumb">
+        <input type="checkbox" id="SettingMultipartVideoAutoPlayRecommend" class="mdc-switch__native-control">
+        </div>
+        </div>
+        </div>
+        </span>
+        </li>
+        <li class=mdc-list-item" role="switch" aria-checked="true" tabindex="0">
+        <label class="mdc-list-item__text" for="demo-list2-switch-item-2">Option 2</label>
+        <span class="mdc-list-item__meta">
+        <div class="mdc-switch">
+        <div class="mdc-switch__track"></div>
+        <div class="mdc-switch__thumb-underlay">
+        <div class="mdc-switch__thumb">
+        <input type="checkbox" id="demo-list2-switch-item-2" class="mdc-switch__native-control" checked>
+        </div>
+        </div>
+        </div>
+        </span>
+        </li>
+        <li class="mdc-list-item" role="switch" aria-checked="false">
+        <label class="mdc-list-item__text" for="demo-list2-switch-item-3">多P视频是否启用推荐自动连播</label>
+        <span class="mdc-list-item__meta">
+        <div class="mdc-switch">
+        <div class="mdc-switch__track"></div>
+        <div class="mdc-switch__thumb-underlay">
+        <div class="mdc-switch__thumb">
+        <input type="checkbox" id="demo-list2-switch-item-3" class="mdc-switch__native-control">
+        </div>
+        </div>
+        </div>
+        </span>
+        </li>
+        </ul>-->
+
+        </div>
+        <div class="mdc-dialog__actions">
+        <button id="SettingDialogCancelButton" type="button" class="mdc-button mdc-dialog__button">
+        <div class="mdc-button__ripple"></div>
+        <span class="mdc-button__label">取消</span>
+        </button>
+        <button id="SettingDialogConfirmButton" type="button" class="mdc-button mdc-dialog__button">
+        <div class="mdc-button__ripple"></div>
+        <span class="mdc-button__label">保存</span>
+        </button>
+        </div>
+        </div>
+        </div>
+        <div class="mdc-dialog__scrim"></div>
+        </div>
+        <div id="MDCSnackbar" class="mdc-snackbar" style="top: 0;bottom: inherit;z-index: 10001">
+        <div class="mdc-snackbar__surface" role="status" aria-relevant="additions">
+        <div class="mdc-snackbar__label" aria-atomic="false"></div>
+        <div class="mdc-snackbar__actions" aria-atomic="true">
+        </div>
+        </div>
+        </div>`
       );
       //JQuery prepend不太稳定，等待JQuery注入完成
       setTimeout(() => {
         jQ_MDCSnackbar = $("#MDCSnackbar");
         MDCSnackbar = mdc.snackbar.MDCSnackbar.attachTo(jQ_MDCSnackbar[0]);
+        MDCDialog = mdc.dialog.MDCDialog.attachTo(
+          $("#AutoPlaySettingDialog")[0]
+        );
+        let settingList = mdc.list.MDCList.attachTo($("#AutoPlaySettingOptionList")[0]);
+        let tooltip = mdc.tooltip.MDCTooltip.attachTo(
+          $("#AutoPlaySettingButtonTooltip")[0]
+        );
+        let jQ_SkipChargeSwitch = $("#SettingSkipCharge");
+        let jQ_AutoPlayChangeSwitch = $("#SettingAutoPlayChange");
+        let jQ_SingleVideoAutoPlayRecommendSwitch = $(
+          "#SettingSingleVideoAutoPlayRecommend"
+        );
+        let jQ_MultipartVideoAutoPlaySwitch = $(
+          "#SettingMultipartVideoAutoPlay"
+        );
+        let jQ_MultipartVideoAutoPlayRecommendSwitch = $(
+          "#SettingMultipartVideoAutoPlayRecommend"
+        );
+
+        let skipChargeSwitch = mdc.switchControl.MDCSwitch.attachTo(
+          jQ_SkipChargeSwitch[0]
+        );
+        let autoPlayChangeSwitch = mdc.switchControl.MDCSwitch.attachTo(
+          jQ_AutoPlayChangeSwitch[0]
+        );
+        let singleVideoAutoPlayRecommendSwitch = mdc.switchControl.MDCSwitch.attachTo(
+          jQ_SingleVideoAutoPlayRecommendSwitch[0]
+        );
+        let multipartVideoAutoPlaySwitch = mdc.switchControl.MDCSwitch.attachTo(
+          jQ_MultipartVideoAutoPlaySwitch[0]
+        );
+        let multipartVideoAutoPlayRecommendSwitch = mdc.switchControl.MDCSwitch.attachTo(
+          jQ_MultipartVideoAutoPlayRecommendSwitch[0]
+          );
+          jQ_AutoPlayChangeSwitch.on({
+              change: () => {
+              if (autoPlayChangeSwitch.checked) {
+                  settingList.setEnabled([2], true);
+                  singleVideoAutoPlayRecommendSwitch.disabled = false;
+                  settingList.setEnabled([3], true);
+                  multipartVideoAutoPlaySwitch.disabled = false;
+                  settingList.setEnabled([4], true);
+                  multipartVideoAutoPlayRecommendSwitch.disabled = false;
+              } else {
+                  settingList.setEnabled([2], false);
+                  singleVideoAutoPlayRecommendSwitch.disabled = true;
+                  settingList.setEnabled([3], false);
+                  multipartVideoAutoPlaySwitch.disabled = true;
+                  settingList.setEnabled([4], false);
+                  multipartVideoAutoPlayRecommendSwitch.disabled = true;
+              }
+          }})
+        $("#OpenSettingDialogButton").on({
+          click: () => {
+            currentSettings = settingsStorage.loadSettings();
+            skipChargeSwitch.checked = currentSettings.skipCharge;
+            autoPlayChangeSwitch.checked = currentSettings.autoPlayChange;
+            singleVideoAutoPlayRecommendSwitch.checked =
+              currentSettings.singleVideoAutoPlayRecommend;
+            multipartVideoAutoPlaySwitch.checked =
+              currentSettings.multipartVideoAutoPlay;
+            multipartVideoAutoPlayRecommendSwitch.checked =
+              currentSettings.multipartVideoAutoPlayRecommend;
+            showMDCSnackbar("设置加载成功");
+            MDCDialog.open();
+          },
+          mouseenter: () => {
+            $("#AutoPlaySettingButtonTooltip").show();
+          },
+          mouseleave: () => {
+            $("#AutoPlaySettingButtonTooltip").hide();
+          },
+        });
+        $("#SettingDialogCancelButton").on({
+          click: () => {
+            MDCDialog.close();
+          },
+        });
+        $("#SettingDialogConfirmButton").on({
+          click: () => {
+            currentSettings.skipCharge = skipChargeSwitch.checked;
+            currentSettings.autoPlayChange = autoPlayChangeSwitch.checked;
+            currentSettings.singleVideoAutoPlayRecommend =
+              singleVideoAutoPlayRecommendSwitch.checked;
+            currentSettings.multipartVideoAutoPlay =
+              multipartVideoAutoPlaySwitch.checked;
+            currentSettings.multipartVideoAutoPlayRecommend =
+              multipartVideoAutoPlayRecommendSwitch.checked;
+            settingsStorage.saveSettings(currentSettings);
+            showMDCSnackbar("设置保存成功");
+            MDCDialog.close();
+          },
+        });
       }, 0);
     });
 
     $(document).on({
       playerPageListXHRResponse: (event, playlistObj) => {
-        if (!AUTO_PLAY_CHANGE_ENABLED) {
+        if (!currentSettings.autoPlayChange) {
           return;
         }
         VIDEO_PAGE_PLAY_LIST_OBJ = playlistObj;
@@ -422,13 +664,13 @@ let MULTIPART_VIDEO_AUTO_PLAY_RECOMMEND_ENABLED = false;
           console.log("检测到无分P视频");
           if (autoPlayButton.hasClass("on")) {
             console.log("推荐自动连播处于开启状态");
-            if (!SINGLE_VIDEO_AUTO_PLAY_ENABLED) {
+            if (!currentSettings.singleVideoAutoPlayRecommend) {
               autoPlayButton.click();
               console.log("已关闭推荐自动连播");
             }
           } else {
             console.log("推荐自动连播处于关闭状态");
-            if (SINGLE_VIDEO_AUTO_PLAY_ENABLED) {
+            if (currentSettings.singleVideoAutoPlayRecommend) {
               autoPlayButton.click();
               console.log("已开启推荐自动连播");
             }
@@ -448,13 +690,13 @@ let MULTIPART_VIDEO_AUTO_PLAY_RECOMMEND_ENABLED = false;
           console.log("检测到有分P视频");
           if (!autoPlayButton.hasClass("on")) {
             console.log("自动连播处于关闭状态");
-            if (MULTIPART_VIDEO_AUTO_PLAY_ENABLED) {
+            if (currentSettings.multipartVideoAutoPlay) {
               autoPlayButton.click();
               console.log("已开启自动连播");
             }
           } else {
             console.log("自动连播处于开启状态");
-            if (!MULTIPART_VIDEO_AUTO_PLAY_ENABLED) {
+            if (!currentSettings.multipartVideoAutoPlay) {
               autoPlayButton.click();
               console.log("已关闭自动连播");
             }
@@ -462,7 +704,7 @@ let MULTIPART_VIDEO_AUTO_PLAY_RECOMMEND_ENABLED = false;
         }
       },
       playerV2XHRResponse: (event, v2Obj) => {
-        if (!AUTO_PLAY_CHANGE_ENABLED) {
+        if (!currentSettings.autoPlayChange) {
           return;
         }
         if ($("#multi_page").length === 0) {
@@ -480,13 +722,13 @@ let MULTIPART_VIDEO_AUTO_PLAY_RECOMMEND_ENABLED = false;
           );
           if (!autoPlayButton.hasClass("on")) {
             console.log("自动连播处于关闭状态");
-            if (MULTIPART_VIDEO_AUTO_PLAY_RECOMMEND_ENABLED) {
+            if (currentSettings.multipartVideoAutoPlayRecommend) {
               autoPlayButton.click();
               console.log("已开启自动连播");
             }
           } else {
             console.log("自动连播处于开启状态");
-            if (!MULTIPART_VIDEO_AUTO_PLAY_RECOMMEND_ENABLED) {
+            if (!currentSettings.multipartVideoAutoPlayRecommend) {
               autoPlayButton.click();
               console.log("已关闭自动连播");
             }
@@ -571,18 +813,18 @@ let MULTIPART_VIDEO_AUTO_PLAY_RECOMMEND_ENABLED = false;
       let buttonDiv = $("#app>div>div>div>div.security-right-title");
       if (buttonDiv[0]) {
         buttonDiv.append(
-          '<div style="float: right;padding: 7px">' +
-            '<input id="ImportFileInput" type="file" hidden accept="application/json">' +
-            '<button id="ImportDataButton" class="mdc-button mdc-button--outlined">' +
-            '<span class="mdc-button__ripple"></span>' +
-            '<span class="mdc-button__label">导入</span>' +
-            "</button>" +
-            '<span style="padding: 8px"></span>' +
-            '<button id="ExportDataButton" class="mdc-button mdc-button--outlined">' +
-            '<span class="mdc-button__ripple"></span>' +
-            '<span class="mdc-button__label">导出</span>' +
-            "</button>" +
-            "</div>"
+          `<div style="float: right;padding: 7px">
+            <input id="ImportFileInput" type="file" hidden accept="application/json">
+            <button id="ImportDataButton" class="mdc-button mdc-button--outlined">
+            <span class="mdc-button__ripple"></span>
+            <span class="mdc-button__label">导入</span>
+            </button>
+            <span style="padding: 8px"></span>
+            <button id="ExportDataButton" class="mdc-button mdc-button--outlined">
+            <span class="mdc-button__ripple"></span>
+            <span class="mdc-button__label">导出</span>
+            </button>
+            </div>`
         );
         let importButton = mdc.ripple.MDCRipple.attachTo(
           $("#ImportDataButton")[0]
@@ -635,30 +877,30 @@ let MULTIPART_VIDEO_AUTO_PLAY_RECOMMEND_ENABLED = false;
 
     $("body").ready(() => {
       $("body").prepend(
-        '<div id="blackReasonDialog" class="mdc-dialog" style="z-index:20001" aria-modal="true">' +
-          '<div class="mdc-dialog__container" style="width: 100%">' +
-          '<div class="mdc-dialog__surface" style="width: 100%" role="alertdialog" aria-modal="true" aria-labelledby="my-dialog-title" aria-describedby="my-dialog-content">' +
-          '<h2 class="mdc-dialog__title" id="blackTitle">' +
-          '<a target="_blank" style="word-break: break-word"></a>' +
-          "</h2>" +
-          '<div class="mdc-dialog__content" id="blackDetails">' +
-          "</div>" +
-          '<div class="mdc-dialog__actions">' +
-          '<button id="blackReasonDialogConfirmButton" type="button" class="mdc-button mdc-dialog__button">' +
-          '<div class="mdc-button__ripple"></div>' +
-          '<span class="mdc-button__label">确认</span>' +
-          "</button>" +
-          "</div>" +
-          "</div>" +
-          "</div>" +
-          '<div class="mdc-dialog__scrim"></div></div>' +
-          '<div id="MDCSnackbar" class="mdc-snackbar" style="top: 0;bottom: inherit;z-index: 1001">' +
-          '<div class="mdc-snackbar__surface" role="status" aria-relevant="additions">' +
-          '<div class="mdc-snackbar__label" aria-atomic="false">Can\'t send photo.Retry in 5 seconds.</div>' +
-          '<div class="mdc-snackbar__actions" aria-atomic="true">' +
-          "</div>" +
-          "</div>" +
-          "</div>"
+        `<div id="blackReasonDialog" class="mdc-dialog" style="z-index:20001" aria-modal="true">
+          <div class="mdc-dialog__container" style="width: 100%">
+          <div class="mdc-dialog__surface" style="width: 100%" role="alertdialog" aria-modal="true" aria-labelledby="blackReasonDialogTitle" aria-describedby="my-dialog-content">
+          <h2 class="mdc-dialog__title" id="blackReasonDialogTitle">
+          <a target="_blank" style="word-break: break-word"></a>
+          </h2>
+          <div class="mdc-dialog__content" id="blackDetails">
+          </div>
+          <div class="mdc-dialog__actions">
+          <button id="blackReasonDialogConfirmButton" type="button" class="mdc-button mdc-dialog__button">
+          <div class="mdc-button__ripple"></div>
+          <span class="mdc-button__label">确认</span>
+          </button>
+          </div>
+          </div>
+          </div>
+          <div class="mdc-dialog__scrim"></div></div>
+          <div id="MDCSnackbar" class="mdc-snackbar" style="top: 0;bottom: inherit;z-index: 1001">
+          <div class="mdc-snackbar__surface" role="status" aria-relevant="additions">
+          <div class="mdc-snackbar__label" aria-atomic="false">Can\'t send photo.Retry in 5 seconds.</div>
+          <div class="mdc-snackbar__actions" aria-atomic="true">
+          </div>
+          </div>
+          </div>`
       );
       //JQuery prepend不太稳定，等待JQuery注入完成
       setTimeout(() => {
@@ -777,10 +1019,10 @@ let MULTIPART_VIDEO_AUTO_PLAY_RECOMMEND_ENABLED = false;
                   );
                   //   console.log(reason);
                   $("#blackReasonDialog")
-                    .find("h2#blackTitle>a")
+                    .find("h2#blackReasonDialogTitle>a")
                     .html(decodeURIComponent(reason.url));
                   $("#blackReasonDialog")
-                    .find("h2#blackTitle>a")
+                    .find("h2#blackReasonDialogTitle>a")
                     .attr("href", reason.url);
                   $("#blackReasonDialog")
                     .find("div#blackDetails")
@@ -837,53 +1079,54 @@ let MULTIPART_VIDEO_AUTO_PLAY_RECOMMEND_ENABLED = false;
     }
     $("body").ready(() => {
       $("body").prepend(
-        '<div id="blackReasonDialog" class="mdc-dialog" style="z-index:20001" aria-modal="true">' +
-          '<div class="mdc-dialog__container" style="width: 100%">' +
-          '<div class="mdc-dialog__surface" style="width: 100%" role="alertdialog" aria-modal="true" aria-labelledby="my-dialog-title" aria-describedby="my-dialog-content">' +
-          '<div class="mdc-dialog__content">' +
-          '<label class="mdc-text-field mdc-text-field--outlined"  style="width: 100%">' +
-          '<span class="mdc-notched-outline">' +
-          '<span class="mdc-notched-outline__leading"></span>' +
-          '<span class="mdc-notched-outline__notch">' +
-          '<span class="mdc-floating-label" id="my-label-id">Url</span>' +
-          "</span>" +
-          '<span class="mdc-notched-outline__trailing"></span>' +
-          "</span>" +
-          '<input id="blackUrlInput" type="text" class="mdc-text-field__input" aria-labelledby="my-label-id">' +
-          "</label>" +
-          "</br>" +
-          "</br>" +
-          '<label class="mdc-text-field mdc-text-field--outlined mdc-text-field--textarea" style="width: 100%">' +
-          '<span class="mdc-notched-outline">' +
-          '<span class="mdc-notched-outline__leading"></span>' +
-          '<span class="mdc-notched-outline__notch">' +
-          '<span class="mdc-floating-label" id="my-label-id">原因</span>' +
-          "</span>" +
-          '<span class="mdc-notched-outline__trailing"></span>' +
-          "</span>" +
-          '<span class= "mdc-text-field__resizer">' +
-          '<textarea id="blackReasonTextArea" class="mdc-text-field__input" rows="8" aria-label="Label"></textarea> ' +
-          "</span>" +
-          "</label>" +
-          "</div>" +
-          '<div class="mdc-dialog__actions">' +
-          '<button id="blackReasonDialogCancelButton" type="button" class="mdc-button mdc-dialog__button">' +
-          '<div class="mdc-button__ripple"></div>' +
-          '<span class="mdc-button__label">取消</span>' +
-          "</button>" +
-          '<button id="blackReasonDialogConfirmButton" type="button" class="mdc-button mdc-dialog__button">' +
-          '<div class="mdc-button__ripple"></div>' +
-          '<span class="mdc-button__label">确认</span>' +
-          "</button>" +
-          "</div>" +
-          "</div>" +
-          "</div>" +
-          '<div class="mdc-dialog__scrim"></div></div>' +
-          '<div id="MDCSnackbar" class="mdc-snackbar" style="top: 0;bottom: inherit;z-index: 1001">' +
-          '<div class="mdc-snackbar__surface" role="status" aria-relevant="additions">' +
-          '<div class="mdc-snackbar__label" aria-atomic="false">Can\'t send photo.Retry in 5 seconds.</div>' +
-          "</div>" +
-          "</div>"
+        `<div id="blackReasonDialog" class="mdc-dialog" style="z-index:20001" aria-modal="true">
+          <div class="mdc-dialog__container" style="width: 100%">
+          <div class="mdc-dialog__surface" style="width: 100%" role="alertdialog" aria-modal="true" aria-labelledby="blackReasonDialogTitle" aria-describedby="my-dialog-content">
+          <h2 class="mdc-dialog__title" id="blackReasonDialogTitle">拉黑原因</h2>
+          <div class="mdc-dialog__content" style="padding-top: 10px">
+          <label class="mdc-text-field mdc-text-field--outlined"  style="width: 100%">
+          <span class="mdc-notched-outline">
+          <span class="mdc-notched-outline__leading"></span>
+          <span class="mdc-notched-outline__notch">
+          <span class="mdc-floating-label" id="blockFromUrlLabel">Url</span>
+          </span>
+          <span class="mdc-notched-outline__trailing"></span>
+          </span>
+          <input id="blackUrlInput" type="text" class="mdc-text-field__input" aria-labelledby="blockFromUrlLabel">
+          </label>
+          </br>
+          </br>
+          <label class="mdc-text-field mdc-text-field--outlined mdc-text-field--textarea" style="width: 100%">
+          <span class="mdc-notched-outline">
+          <span class="mdc-notched-outline__leading"></span>
+          <span class="mdc-notched-outline__notch">
+          <span class="mdc-floating-label" id="blockReason">原因</span>
+          </span>
+          <span class="mdc-notched-outline__trailing"></span>
+          </span>
+          <span class= "mdc-text-field__resizer">
+          <textarea id="blackReasonTextArea" class="mdc-text-field__input" rows="8" aria-labelledby="blockReason"></textarea> 
+          </span>
+          </label>
+          </div>
+          <div class="mdc-dialog__actions">
+          <button id="blackReasonDialogCancelButton" type="button" class="mdc-button mdc-dialog__button">
+          <div class="mdc-button__ripple"></div>
+          <span class="mdc-button__label">取消</span>
+          </button>
+          <button id="blackReasonDialogConfirmButton" type="button" class="mdc-button mdc-dialog__button">
+          <div class="mdc-button__ripple"></div>
+          <span class="mdc-button__label">确认</span>
+          </button>
+          </div>
+          </div>
+          </div>
+          <div class="mdc-dialog__scrim"></div></div>
+          <div id="MDCSnackbar" class="mdc-snackbar" style="top: 0;bottom: inherit;z-index: 1001">
+          <div class="mdc-snackbar__surface" role="status" aria-relevant="additions">
+          <div class="mdc-snackbar__label" aria-atomic="false">Can\'t send photo.Retry in 5 seconds.</div>
+          </div>
+          </div>`
       );
       //JQuery prepend不太稳定，等待JQuery注入完成
       setTimeout(() => {
