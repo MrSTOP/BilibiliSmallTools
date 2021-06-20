@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name               哔哩哔哩 小功能
 // @namespace          https://github.com/MrSTOP
-// @version            0.3.5.4
+// @version            0.3.6.6
 // @description        记录为什么屏蔽了此人，支持导入导出。添加自动跳过充电页面功能，调整B站恶心的自动连播功能
 // @author             MrSTOP
 // @license            GPLv3
@@ -312,6 +312,7 @@
         singleVideoAutoPlayRecommend: false,
         multipartVideoAutoPlay: true,
         multipartVideoAutoPlayRecommend: false,
+        bangumiAutoPlay: true,
       });
     }
 
@@ -370,6 +371,25 @@
           //     );
           //     console.log("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$");
           //   }
+          if ($(node).hasClass("bilibili-player-video-btn-setting")) {
+            $("body .bilibili-player-video-btn-setting")[0].dispatchEvent(
+              new Event("mouseover")
+            );
+            $("body .bilibili-player-video-btn-setting")[0].dispatchEvent(
+              new Event("mouseout")
+            );
+            if (currentSettings.bangumiAutoPlay) {
+              $(
+                "body .bilibili-player-video-btn-setting-right-playtype-content>div>div>label:nth-of-type(1)"
+              )[0].click();
+              console.log("已开启自动切集");
+            } else {
+              $(
+                "body .bilibili-player-video-btn-setting-right-playtype-content>div>div>label:nth-of-type(2)"
+              )[0].click();
+              console.log("已开启播完暂停");
+            }
+          }
           if ($(node).hasClass("list-item")) {
             $(node).find("li.blacklist").on({
               click: blackButtonClickHandler,
@@ -484,6 +504,19 @@
         </span>
         <label class="mdc-list-item__text" for="SettingMultipartVideoAutoPlayRecommendInput">多P视频是否启用推荐自动连播</label>
         </li>
+        <li class="mdc-list-item" role="switch" tabindex="4">
+        <span class="mdc-list-item__graphic">
+        <div id="SettingBangumiAutoPlay" class="mdc-switch">
+        <div class="mdc-switch__track"></div>
+        <div class="mdc-switch__thumb-underlay">
+        <div class="mdc-switch__thumb">
+        <input type="checkbox" id="SettingBangumiAutoPlayInput" class="mdc-switch__native-control">
+        </div>
+        </div>
+        </div>
+        </span>
+        <label class="mdc-list-item__text" for="SettingBangumiAutoPlayInput">番剧是否启用自动切集</label>
+        </li>
         </ul>
         <!--<ul id="AutoPlaySettingOptionList" class="mdc-list" role="group" aria-label="List with switch items">
         <li class="mdc-list-item" role="switch" aria-checked="false">
@@ -557,7 +590,9 @@
         MDCDialog = mdc.dialog.MDCDialog.attachTo(
           $("#AutoPlaySettingDialog")[0]
         );
-        let settingList = mdc.list.MDCList.attachTo($("#AutoPlaySettingOptionList")[0]);
+        let settingList = mdc.list.MDCList.attachTo(
+          $("#AutoPlaySettingOptionList")[0]
+        );
         let tooltip = mdc.tooltip.MDCTooltip.attachTo(
           $("#AutoPlaySettingButtonTooltip")[0]
         );
@@ -572,6 +607,7 @@
         let jQ_MultipartVideoAutoPlayRecommendSwitch = $(
           "#SettingMultipartVideoAutoPlayRecommend"
         );
+        let jQ_BangumiAutoPlaySwitch = $("#SettingBangumiAutoPlay");
 
         let skipChargeSwitch = mdc.switchControl.MDCSwitch.attachTo(
           jQ_SkipChargeSwitch[0]
@@ -579,33 +615,43 @@
         let autoPlayChangeSwitch = mdc.switchControl.MDCSwitch.attachTo(
           jQ_AutoPlayChangeSwitch[0]
         );
-        let singleVideoAutoPlayRecommendSwitch = mdc.switchControl.MDCSwitch.attachTo(
-          jQ_SingleVideoAutoPlayRecommendSwitch[0]
-        );
+        let singleVideoAutoPlayRecommendSwitch =
+          mdc.switchControl.MDCSwitch.attachTo(
+            jQ_SingleVideoAutoPlayRecommendSwitch[0]
+          );
         let multipartVideoAutoPlaySwitch = mdc.switchControl.MDCSwitch.attachTo(
           jQ_MultipartVideoAutoPlaySwitch[0]
         );
-        let multipartVideoAutoPlayRecommendSwitch = mdc.switchControl.MDCSwitch.attachTo(
-          jQ_MultipartVideoAutoPlayRecommendSwitch[0]
+        let multipartVideoAutoPlayRecommendSwitch =
+          mdc.switchControl.MDCSwitch.attachTo(
+            jQ_MultipartVideoAutoPlayRecommendSwitch[0]
           );
-          jQ_AutoPlayChangeSwitch.on({
-              change: () => {
-              if (autoPlayChangeSwitch.checked) {
-                  settingList.setEnabled([2], true);
-                  singleVideoAutoPlayRecommendSwitch.disabled = false;
-                  settingList.setEnabled([3], true);
-                  multipartVideoAutoPlaySwitch.disabled = false;
-                  settingList.setEnabled([4], true);
-                  multipartVideoAutoPlayRecommendSwitch.disabled = false;
-              } else {
-                  settingList.setEnabled([2], false);
-                  singleVideoAutoPlayRecommendSwitch.disabled = true;
-                  settingList.setEnabled([3], false);
-                  multipartVideoAutoPlaySwitch.disabled = true;
-                  settingList.setEnabled([4], false);
-                  multipartVideoAutoPlayRecommendSwitch.disabled = true;
-              }
-          }})
+        let bangumiAutoPlaySwitch = mdc.switchControl.MDCSwitch.attachTo(
+          jQ_BangumiAutoPlaySwitch[0]
+        );
+        jQ_AutoPlayChangeSwitch.on({
+          change: () => {
+            if (autoPlayChangeSwitch.checked) {
+              settingList.setEnabled([2], true);
+              singleVideoAutoPlayRecommendSwitch.disabled = false;
+              settingList.setEnabled([3], true);
+              multipartVideoAutoPlaySwitch.disabled = false;
+              settingList.setEnabled([4], true);
+              multipartVideoAutoPlayRecommendSwitch.disabled = false;
+              settingList.setEnabled([5], true);
+              bangumiAutoPlaySwitch.disabled = false;
+            } else {
+              settingList.setEnabled([2], false);
+              singleVideoAutoPlayRecommendSwitch.disabled = true;
+              settingList.setEnabled([3], false);
+              multipartVideoAutoPlaySwitch.disabled = true;
+              settingList.setEnabled([4], false);
+              multipartVideoAutoPlayRecommendSwitch.disabled = true;
+              settingList.setEnabled([5], false);
+              bangumiAutoPlaySwitch.disabled = true;
+            }
+          },
+        });
         $("#OpenSettingDialogButton").on({
           click: () => {
             currentSettings = settingsStorage.loadSettings();
@@ -617,6 +663,7 @@
               currentSettings.multipartVideoAutoPlay;
             multipartVideoAutoPlayRecommendSwitch.checked =
               currentSettings.multipartVideoAutoPlayRecommend;
+            bangumiAutoPlaySwitch.checked = currentSettings.bangumiAutoPlay;
             showMDCSnackbar("设置加载成功");
             MDCDialog.open();
           },
@@ -642,6 +689,7 @@
               multipartVideoAutoPlaySwitch.checked;
             currentSettings.multipartVideoAutoPlayRecommend =
               multipartVideoAutoPlayRecommendSwitch.checked;
+            currentSettings.bangumiAutoPlay = bangumiAutoPlaySwitch.checked;
             settingsStorage.saveSettings(currentSettings);
             showMDCSnackbar("设置保存成功");
             MDCDialog.close();
