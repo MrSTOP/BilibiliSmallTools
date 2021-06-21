@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name               哔哩哔哩 小功能
 // @namespace          https://github.com/MrSTOP
-// @version            0.3.6.6
+// @version            0.4.5.1
 // @description        记录为什么屏蔽了此人，支持导入导出。添加自动跳过充电页面功能，调整B站恶心的自动连播功能
 // @author             MrSTOP
 // @license            GPLv3
@@ -20,21 +20,8 @@
 // @require            https://cdn.jsdelivr.net/npm/jquery/dist/jquery.min.js
 // @require            https://unpkg.com/material-components-web@latest/dist/material-components-web.min.js
 // @resource           material-component-web    https://unpkg.com/material-components-web@latest/dist/material-components-web.min.css
-// @resource           material-icons    https://unpkg.com/material-icons@latest/iconfont/material-icons.css
 // @noframes
 // ==/UserScript==
-//是否自动跳过充电界面 true:跳过 false:不跳过
-// let SKIP_CHARGE_ENABLED = true;
-//===============================================
-//是否启用自动连播改变功能(注意以下三项设置仅在启用本设置后生效) true:启用 false:不启用
-// let AUTO_PLAY_CHANGE_ENABLED = true;
-//单个视频是否启用自动连播 true:启用 false:不启用
-// let SINGLE_VIDEO_AUTO_PLAY_ENABLED = false;
-//多P视频是否启用分P自动连播 true:启用 false:不启用
-// let MULTIPART_VIDEO_AUTO_PLAY_ENABLED = true;
-//多P视频是否启用推荐自动连播 true:启用 false:不启用
-// let MULTIPART_VIDEO_AUTO_PLAY_RECOMMEND_ENABLED = false;
-//===============================================
 
 // 监听XHR请求避免重复请求黑名单导致API被禁用
 (function (open) {
@@ -98,14 +85,21 @@
   let MDCSnackbar;
   let jQ_MDCSnackbar;
   let MDCDialog;
+  let DEFAULT_SETTING = {
+    skipCharge: true,
+    autoPlayChange: true,
+    singleVideoAutoPlayRecommend: false,
+    multipartVideoAutoPlay: true,
+    multipartVideoAutoPlayRecommend: false,
+    bangumiAutoPlay: true,
+    settingButtonOpacity: 100,
+    settingButtonRightPosition: 0,
+    settingButtonTopPosition: 300,
+  };
   // let uid = document.cookie.match(/(?<=DedeUserID=).+?(?=;)/)[0];
   let crsfToken = document.cookie.match(/(?<=bili_jct=).+?(?=;)/)[0];
 
   GM_addStyle(GM_getResourceText("material-component-web"));
-  GM_addStyle(GM_getResourceText("material-icons"));
-  GM_addStyle(
-    ".mdc-list-item{height:32px;padding:20px 0px 0px 14px}.mdc-list-item__text{padding-left:10px}"
-  );
   class BlockController {
     constructor() {
       this._singletonData = new SingletonData("blocked-reasons", {});
@@ -306,18 +300,14 @@
   }
   class SettingsStorage {
     constructor() {
-      this._singletonData = new SingletonData("settings", {
-        skipCharge: true,
-        autoPlayChange: true,
-        singleVideoAutoPlayRecommend: false,
-        multipartVideoAutoPlay: true,
-        multipartVideoAutoPlayRecommend: false,
-        bangumiAutoPlay: true,
-      });
+      this._singletonData = new SingletonData(
+        "bilibili-small-tools-settings",
+        DEFAULT_SETTING
+      );
     }
 
-    saveSettings(settings) {
-      this._singletonData.data = settings;
+    saveSettings(newSettings) {
+      this._singletonData.data = newSettings;
       this._singletonData.save();
     }
 
@@ -329,7 +319,33 @@
   let blockReason = new BlockController();
   let settingsStorage = new SettingsStorage();
   let currentSettings = settingsStorage.loadSettings();
-
+  /********************************************************************************/
+  //防止升级后出现undefined值
+  if (currentSettings.bangumiAutoPlay === undefined) {
+    currentSettings.bangumiAutoPlay = true;
+  }
+  if (currentSettings.settingButtonOpacity === undefined) {
+    currentSettings.settingButtonOpacity = 100;
+  }
+  if (currentSettings.settingButtonRightPosition === undefined) {
+    currentSettings.settingButtonRightPosition = 0;
+  }
+  if (currentSettings.settingButtonTopPosition === undefined) {
+    currentSettings.settingButtonTopPosition = 300;
+  }
+  /********************************************************************************/
+  GM_addStyle(
+    ".mdc-list-item{height:32px;padding:20px 0px 0px 14px}.mdc-list-item__text{padding-left:10px}" +
+      ".bilibili-small-tools-setting{z-index:1001;position:absolute;right:" +
+      currentSettings.settingButtonRightPosition / 10 +
+      "%;top:" +
+      currentSettings.settingButtonTopPosition / 10 +
+      "%}" +
+      ".bilibili-small-tools-setting-button{opacity:" +
+      currentSettings.settingButtonOpacity / 1000 +
+      "}" +
+      ".bilibili-small-tools-setting-button:hover{opacity:1}"
+  );
   function xmlEscape(s) {
     return $("<div/>").text(s).html();
   }
@@ -359,19 +375,10 @@
           console.log("跳过充电");
         }
         mutationRecord.addedNodes.forEach((node) => {
-          // console.log(node.classList.contains("blacklist"));
-          //   if ($(node).hasClass("r-con")) {
-          //     console.log("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$");
-          //     console.log($(node));
-          //     console.log($(node).attr("class"));
-          //     console.log(
-          //       $(node)
-          //         .find(".head-right")
-          //         .before('<span class="material-icons mdc-theme--primary" style="font-size: 18px;">settings</span >')
-          //     );
-          //     console.log("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$");
-          //   }
-          if ($(node).hasClass("bilibili-player-video-btn-setting")) {
+          if (
+            $(node).hasClass("bilibili-player-video-btn-setting") &&
+            currentSettings.autoPlayChange
+          ) {
             $("body .bilibili-player-video-btn-setting")[0].dispatchEvent(
               new Event("mouseover")
             );
@@ -425,8 +432,10 @@
 
     $("body").ready(() => {
       $("body").prepend(
-        `<div style="position: absolute;right: 0.5%; top: 30%">
-        <button id="OpenSettingDialogButton" class="mdc-icon-button material-icons" data-tooltip-id="AutoPlaySettingButtonTooltip" aria-label="toggle favorite" data-tooltip-id="tooltip-id">settings</button>
+        `<div class="bilibili-small-tools-setting" id="OpenSettingDialogButtonWrapper">
+        <button id="OpenSettingDialogButton" class="mdc-icon-button bilibili-small-tools-setting-button" data-tooltip-id="AutoPlaySettingButtonTooltip" aria-label="toggle favorite" data-tooltip-id="tooltip-id">
+          <svg xmlns="http://www.w3.org/2000/svg" enable-background="new 0 0 24 24" height="24px" viewBox="0 0 24 24" width="24px" fill="#000000"><g><path d="M0,0h24v24H0V0z" fill="none"/><path d="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.07-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61 l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41 h-3.84c-0.24,0-0.43,0.17-0.47,0.41L9.25,5.35C8.66,5.59,8.12,5.92,7.63,6.29L5.24,5.33c-0.22-0.08-0.47,0-0.59,0.22L2.74,8.87 C2.62,9.08,2.66,9.34,2.86,9.48l2.03,1.58C4.84,11.36,4.8,11.69,4.8,12s0.02,0.64,0.07,0.94l-2.03,1.58 c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.36,2.54 c0.05,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.44-0.17,0.47-0.41l0.36-2.54c0.59-0.24,1.13-0.56,1.62-0.94l2.39,0.96 c0.22,0.08,0.47,0,0.59-0.22l1.92-3.32c0.12-0.22,0.07-0.47-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6 s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z"/></g></svg>
+        </button>
         <div id="AutoPlaySettingButtonTooltip" class="mdc-tooltip" role="tooltip"  data-mdc-tooltip-persist="false" aria-hidden="true">
         <div class= "mdc-tooltip__surface">自动播放设置</div>
         </div>
@@ -438,8 +447,8 @@
         <h2 class="mdc-dialog__title" id="AutoPlaySettingDialogTitle">自动播放设置</h2>
         
         <div class="mdc-dialog__content" id="">
-        <ul id="AutoPlaySettingOptionList" class="mdc-list" role="group" aria-label="List with switch items">
-        <li class="mdc-list-item" role="switch" aria-checked="false">
+        <ul id="AutoPlaySettingOptionList" class="mdc-list" role="group" aria-label="bilibili small tools setting">
+        <li class="mdc-list-item" role="switch" tabindex="1">
         <span class="mdc-list-item__graphic">
         <div id="SettingSkipCharge" class="mdc-switch">
         <div class="mdc-switch__track"></div>
@@ -452,7 +461,7 @@
         </span>
         <label class="mdc-list-item__text" for="SettingSkipChargeInput">是否自动跳过充电界面</label>
         </li>
-        <li class="mdc-list-item" role="switch" tabindex="0">
+        <li class="mdc-list-item" role="switch" tabindex="2">
         <span class="mdc-list-item__graphic">
         <div id="SettingAutoPlayChange" class="mdc-switch">
         <div class="mdc-switch__track"></div>
@@ -463,9 +472,9 @@
         </div>
         </div>
         </span>
-        <label class="mdc-list-item__text" for="SettingAutoPlayChangeInput">是否启用自动连播改变功能(注意以下三项设置仅在启用本设置后生效)</label>
+        <label class="mdc-list-item__text" for="SettingAutoPlayChangeInput">是否启用自动连播改变功能(注意以下四项设置仅在启用本设置后生效)</label>
         </li>
-        <li class="mdc-list-item" role="switch" tabindex="1">
+        <li class="mdc-list-item" role="switch" tabindex="3">
         <span class="mdc-list-item__graphic">
         <div id="SettingSingleVideoAutoPlayRecommend" class="mdc-switch">
         <div class="mdc-switch__track"></div>
@@ -478,7 +487,7 @@
         </span>
         <label class="mdc-list-item__text" for="SettingSingleVideoAutoPlayRecommendInput">单个视频是否启用自动连播</label>
         </li>
-        <li class="mdc-list-item" role="switch" tabindex="2">
+        <li class="mdc-list-item" role="switch" tabindex="4">
         <span class="mdc-list-item__graphic">
         <div id="SettingMultipartVideoAutoPlay" class="mdc-switch">
         <div class="mdc-switch__track"></div>
@@ -491,7 +500,7 @@
         </span>
         <label class="mdc-list-item__text" for="SettingMultipartVideoAutoPlayInput">多P视频是否启用分P自动连播</label>
         </li>
-        <li class="mdc-list-item" role="switch" tabindex="3">
+        <li class="mdc-list-item" role="switch" tabindex="5">
         <span class="mdc-list-item__graphic">
         <div id="SettingMultipartVideoAutoPlayRecommend" class="mdc-switch">
         <div class="mdc-switch__track"></div>
@@ -504,7 +513,7 @@
         </span>
         <label class="mdc-list-item__text" for="SettingMultipartVideoAutoPlayRecommendInput">多P视频是否启用推荐自动连播</label>
         </li>
-        <li class="mdc-list-item" role="switch" tabindex="4">
+        <li class="mdc-list-item" role="switch" tabindex="6">
         <span class="mdc-list-item__graphic">
         <div id="SettingBangumiAutoPlay" class="mdc-switch">
         <div class="mdc-switch__track"></div>
@@ -518,47 +527,49 @@
         <label class="mdc-list-item__text" for="SettingBangumiAutoPlayInput">番剧是否启用自动切集</label>
         </li>
         </ul>
-        <!--<ul id="AutoPlaySettingOptionList" class="mdc-list" role="group" aria-label="List with switch items">
-        <li class="mdc-list-item" role="switch" aria-checked="false">
-        <label class="mdc-list-item__text" for="SettingMultipartVideoAutoPlayRecommend">多P视频是否启用推荐自动连播</label>
-        <span class="mdc-list-item__meta">
-        <div class="mdc-switch">
-        <div class="mdc-switch__track"></div>
-        <div class="mdc-switch__thumb-underlay">
-        <div class="mdc-switch__thumb">
-        <input type="checkbox" id="SettingMultipartVideoAutoPlayRecommend" class="mdc-switch__native-control">
-        </div>
-        </div>
-        </div>
-        </span>
-        </li>
-        <li class=mdc-list-item" role="switch" aria-checked="true" tabindex="0">
-        <label class="mdc-list-item__text" for="demo-list2-switch-item-2">Option 2</label>
-        <span class="mdc-list-item__meta">
-        <div class="mdc-switch">
-        <div class="mdc-switch__track"></div>
-        <div class="mdc-switch__thumb-underlay">
-        <div class="mdc-switch__thumb">
-        <input type="checkbox" id="demo-list2-switch-item-2" class="mdc-switch__native-control" checked>
-        </div>
-        </div>
-        </div>
-        </span>
-        </li>
-        <li class="mdc-list-item" role="switch" aria-checked="false">
-        <label class="mdc-list-item__text" for="demo-list2-switch-item-3">多P视频是否启用推荐自动连播</label>
-        <span class="mdc-list-item__meta">
-        <div class="mdc-switch">
-        <div class="mdc-switch__track"></div>
-        <div class="mdc-switch__thumb-underlay">
-        <div class="mdc-switch__thumb">
-        <input type="checkbox" id="demo-list2-switch-item-3" class="mdc-switch__native-control">
-        </div>
-        </div>
-        </div>
-        </span>
-        </li>
-        </ul>-->
+
+        <label class="mdc-list-item__text" for="SettingSettingButtonOpacity">设置按钮不透明度<input type="number" id="SettingSettingButtonOpacityManualInput" pattern="\d+"/></label>
+        
+          <div class="mdc-slider" id="SettingSettingButtonOpacity">
+            <input class="mdc-slider__input" type="range" id="SettingSettingButtonOpacityInput" min="0" max="1000" value="100" name="buttonOpacity">
+            <div class="mdc-slider__track">
+              <div class="mdc-slider__track--inactive"></div>
+              <div class="mdc-slider__track--active">
+                <div class="mdc-slider__track--active_fill"></div>
+              </div>
+            </div>
+            <div class="mdc-slider__thumb">
+              <div class="mdc-slider__thumb-knob"></div>
+            </div>
+          </div>
+        <label class="mdc-list-item__text" for="SettingSettingButtonRightPosition">设置按钮右侧偏移<input type="number" id="SettingSettingButtonRightPositionManualInput" pattern="\d+"/></label>
+        
+          <div class="mdc-slider" id="SettingSettingButtonRightPosition">
+            <input class="mdc-slider__input" type="range" id="SettingSettingButtonRightPositionInput" min="0" max="1000" value="5" name="buttonRightPosition">
+            <div class="mdc-slider__track">
+              <div class="mdc-slider__track--inactive"></div>
+              <div class="mdc-slider__track--active">
+                <div class="mdc-slider__track--active_fill"></div>
+              </div>
+            </div>
+            <div class="mdc-slider__thumb">
+              <div class="mdc-slider__thumb-knob"></div>
+            </div>
+          </div>
+        <label class="mdc-list-item__text" for="SettingSettingButtonTopPosition">设置按钮顶部偏移<input type="number" id="SettingSettingButtonTopPositionManualInput" pattern="\d+"/></label>
+        
+          <div class="mdc-slider" id="SettingSettingButtonTopPosition">
+            <input class="mdc-slider__input" type="range" id="SettingSettingButtonTopPositionInput" min="0" max="1000" value="300" name="buttonTopPosition">
+            <div class="mdc-slider__track">
+              <div class="mdc-slider__track--inactive"></div>
+              <div class="mdc-slider__track--active">
+                <div class="mdc-slider__track--active_fill"></div>
+              </div>
+            </div>
+            <div class="mdc-slider__thumb">
+              <div class="mdc-slider__thumb-knob"></div>
+            </div>
+          </div>
 
         </div>
         <div class="mdc-dialog__actions">
@@ -608,6 +619,22 @@
           "#SettingMultipartVideoAutoPlayRecommend"
         );
         let jQ_BangumiAutoPlaySwitch = $("#SettingBangumiAutoPlay");
+        let jQ_SettingButtonOpacitySlider = $("#SettingSettingButtonOpacity");
+        let jQ_SettingButtonOpacityManualInput = $(
+          "#SettingSettingButtonOpacityManualInput"
+        );
+        let jQ_SettingButtonRightPositionSlider = $(
+          "#SettingSettingButtonRightPosition"
+        );
+        let jQ_SettingButtonRightPositionManualInput = $(
+          "#SettingSettingButtonRightPositionManualInput"
+        );
+        let jQ_SettingButtonTopPositionSlider = $(
+          "#SettingSettingButtonTopPosition"
+        );
+        let jQ_SettingButtonTopPositionManualInput = $(
+          "#SettingSettingButtonTopPositionManualInput"
+        );
 
         let skipChargeSwitch = mdc.switchControl.MDCSwitch.attachTo(
           jQ_SkipChargeSwitch[0]
@@ -629,6 +656,84 @@
         let bangumiAutoPlaySwitch = mdc.switchControl.MDCSwitch.attachTo(
           jQ_BangumiAutoPlaySwitch[0]
         );
+        let settingButtonOpacitySlider = mdc.slider.MDCSlider.attachTo(
+          jQ_SettingButtonOpacitySlider[0]
+        );
+        let settingButtonRightPositionSlider = mdc.slider.MDCSlider.attachTo(
+          jQ_SettingButtonRightPositionSlider[0]
+        );
+        let settingButtonTopPositionSlider = mdc.slider.MDCSlider.attachTo(
+          jQ_SettingButtonTopPositionSlider[0]
+        );
+
+        MDCDialog.listen("MDCDialog:opened", () => {
+          settingButtonOpacitySlider.layout();
+          settingButtonRightPositionSlider.layout();
+          settingButtonTopPositionSlider.layout();
+        });
+
+        settingButtonOpacitySlider.listen("MDCSlider:input", (event) => {
+          jQ_SettingButtonOpacityManualInput.val(event.detail.value);
+          $("#OpenSettingDialogButton").css(
+            "opacity",
+            event.detail.value / 1000
+          );
+        });
+        jQ_SettingButtonOpacityManualInput.on({
+          input: () => {
+            let opacityValue = jQ_SettingButtonOpacityManualInput.val();
+            opacityValue = opacityValue < 0 ? 0 : opacityValue;
+            opacityValue = opacityValue > 1000 ? 1000 : opacityValue;
+            jQ_SettingButtonOpacityManualInput.val(opacityValue);
+            settingButtonOpacitySlider.setValue(opacityValue);
+            $("#OpenSettingDialogButton").css("opacity", opacityValue / 1000);
+          },
+        });
+        settingButtonRightPositionSlider.listen("MDCSlider:input", (event) => {
+          jQ_SettingButtonRightPositionManualInput.val(event.detail.value);
+          $("#OpenSettingDialogButtonWrapper").css(
+            "right",
+            event.detail.value / 10 + "%"
+          );
+        });
+        jQ_SettingButtonRightPositionManualInput.on({
+          input: () => {
+            let rightPositionValue =
+              jQ_SettingButtonRightPositionManualInput.val();
+            rightPositionValue =
+              rightPositionValue < 0 ? 0 : rightPositionValue;
+            rightPositionValue =
+              rightPositionValue > 1000 ? 1000 : rightPositionValue;
+            jQ_SettingButtonRightPositionManualInput.val(rightPositionValue);
+            settingButtonRightPositionSlider.setValue(rightPositionValue);
+            $("#OpenSettingDialogButtonWrapper").css(
+              "right",
+              rightPositionValue / 10 + "%"
+            );
+          },
+        });
+        settingButtonTopPositionSlider.listen("MDCSlider:input", (event) => {
+          jQ_SettingButtonTopPositionManualInput.val(event.detail.value);
+          $("#OpenSettingDialogButtonWrapper").css(
+            "top",
+            event.detail.value / 10 + "%"
+          );
+        });
+        jQ_SettingButtonTopPositionManualInput.on({
+          input: () => {
+            let topPositionValue = jQ_SettingButtonTopPositionManualInput.val();
+            topPositionValue = topPositionValue < 0 ? 0 : topPositionValue;
+            topPositionValue =
+              topPositionValue > 1000 ? 1000 : topPositionValue;
+            jQ_SettingButtonTopPositionManualInput.val(topPositionValue);
+            settingButtonTopPositionSlider.setValue(topPositionValue);
+            $("#OpenSettingDialogButtonWrapper").css(
+              "top",
+              topPositionValue / 10 + "%"
+            );
+          },
+        });
+
         jQ_AutoPlayChangeSwitch.on({
           change: () => {
             if (autoPlayChangeSwitch.checked) {
@@ -654,7 +759,6 @@
         });
         $("#OpenSettingDialogButton").on({
           click: () => {
-            currentSettings = settingsStorage.loadSettings();
             skipChargeSwitch.checked = currentSettings.skipCharge;
             autoPlayChangeSwitch.checked = currentSettings.autoPlayChange;
             singleVideoAutoPlayRecommendSwitch.checked =
@@ -664,6 +768,23 @@
             multipartVideoAutoPlayRecommendSwitch.checked =
               currentSettings.multipartVideoAutoPlayRecommend;
             bangumiAutoPlaySwitch.checked = currentSettings.bangumiAutoPlay;
+            let settingButtonOpacity = currentSettings.settingButtonOpacity;
+            settingButtonOpacitySlider.setValue(settingButtonOpacity);
+            jQ_SettingButtonOpacityManualInput.val(settingButtonOpacity);
+            let settingButtonRightPosition =
+              currentSettings.settingButtonRightPosition;
+            settingButtonRightPositionSlider.setValue(
+              settingButtonRightPosition
+            );
+            jQ_SettingButtonRightPositionManualInput.val(
+              settingButtonRightPosition
+            );
+            let settingButtonTopPosition =
+              currentSettings.settingButtonTopPosition;
+            settingButtonTopPositionSlider.setValue(settingButtonTopPosition);
+            jQ_SettingButtonTopPositionManualInput.val(
+              settingButtonTopPosition
+            );
             showMDCSnackbar("设置加载成功");
             MDCDialog.open();
           },
@@ -690,6 +811,12 @@
             currentSettings.multipartVideoAutoPlayRecommend =
               multipartVideoAutoPlayRecommendSwitch.checked;
             currentSettings.bangumiAutoPlay = bangumiAutoPlaySwitch.checked;
+            currentSettings.settingButtonOpacity =
+              settingButtonOpacitySlider.getValue();
+            currentSettings.settingButtonRightPosition =
+              settingButtonRightPositionSlider.getValue();
+            currentSettings.settingButtonTopPosition =
+              settingButtonTopPositionSlider.getValue();
             settingsStorage.saveSettings(currentSettings);
             showMDCSnackbar("设置保存成功");
             MDCDialog.close();
