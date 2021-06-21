@@ -328,16 +328,18 @@
   /********************************************************************************/
   //防止升级后出现undefined值
   if (currentSettings.bangumiAutoPlay === undefined) {
-    currentSettings.bangumiAutoPlay = true;
+    currentSettings.bangumiAutoPlay = DEFAULT_SETTING.bangumiAutoPlay;
   }
   if (currentSettings.settingButtonOpacity === undefined) {
-    currentSettings.settingButtonOpacity = 100;
+    currentSettings.settingButtonOpacity = DEFAULT_SETTING.settingButtonOpacity;
   }
   if (currentSettings.settingButtonRightPosition === undefined) {
-    currentSettings.settingButtonRightPosition = 0;
+    currentSettings.settingButtonRightPosition =
+      DEFAULT_SETTING.settingButtonRightPosition;
   }
   if (currentSettings.settingButtonTopPosition === undefined) {
-    currentSettings.settingButtonTopPosition = 300;
+    currentSettings.settingButtonTopPosition =
+      DEFAULT_SETTING.settingButtonTopPosition;
   }
   /********************************************************************************/
   GM_addStyle(
