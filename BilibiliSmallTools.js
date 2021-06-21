@@ -2,7 +2,7 @@
 // @name               哔哩哔哩 小功能
 // @namespace          https://github.com/MrSTOP
 // @version            0.4.5.1
-// @description        记录为什么屏蔽了此人，支持导入导出。添加自动跳过充电页面功能，调整B站恶心的自动连播功能
+// @description        ！！此版本可能引入了破坏性更改！！记录为什么屏蔽了此人，支持导入导出。添加自动跳过充电页面功能，调整B站恶心的自动连播功能
 // @author             MrSTOP
 // @license            GPLv3
 // @run-at             document-start
@@ -64,6 +64,12 @@
           this.responseURL.includes("https://api.bilibili.com/x/player/v2")
         ) {
           $(document).trigger("playerV2XHRResponse", [
+            JSON.parse(this.responseText),
+          ]);
+        } else if (
+          this.responseURL.includes("https://api.bilibili.com/x/space/acc/info")
+        ) {
+          $(document).trigger("spaceAccInfoXHRResponse", [
             JSON.parse(this.responseText),
           ]);
         }
@@ -316,7 +322,7 @@
     }
   }
 
-  let blockReason = new BlockController();
+  let blockReasonController = new BlockController();
   let settingsStorage = new SettingsStorage();
   let currentSettings = settingsStorage.loadSettings();
   /********************************************************************************/
@@ -967,7 +973,7 @@
                   xmlEscape(lastCommentUser.content),
                 ].join("<br>")
               );
-              blockReason.addReason(
+              blockReasonController.addReason(
                 lastCommentUser.userId,
                 url,
                 lastCommentUser.type,
@@ -1018,7 +1024,7 @@
             let reader = new FileReader();
             reader.onload = (x) => {
               var contents = x.target.result;
-              blockReason.import2(contents);
+              blockReasonController.import2(contents);
             };
             reader.readAsText(file);
           },
@@ -1038,7 +1044,7 @@
         });
         $("#ExportDataButton").on({
           click: () => {
-            blockReason.export();
+            blockReasonController.export();
             showMDCSnackbar("导出完成");
           },
         });
@@ -1132,14 +1138,18 @@
                 );
               },
             });
-            let data = blockReason.getReason(blackListObj.data.list[index].mid);
+            let data = blockReasonController.getReason(
+              blackListObj.data.list[index].mid
+            );
             removeBtn.on({
               click: () => {
                 $(document).one({
                   relationModifyXHRResponse: (event, resultObj) => {
                     // console.log(resultObj);
                     if (resultObj.code === 0) {
-                      blockReason.removeReason($(element).attr("mid"));
+                      blockReasonController.removeReason(
+                        $(element).attr("mid")
+                      );
                       showMDCSnackbar("删除拉黑理由完成");
                     } else {
                       showMDCSnackbar(resultObj.message);
@@ -1186,7 +1196,7 @@
               $(root).append(div);
               $(p).on({
                 click: function () {
-                  let reason = blockReason.getReason(
+                  let reason = blockReasonController.getReason(
                     $(this)
                       .parentsUntil(".black-list")
                       .parent()
@@ -1218,9 +1228,16 @@
   function onSpacePage() {
     let observer = new MutationObserver((mutationRecords, instance) => {
       mutationRecords.forEach((mutation) => {
+        //没有添加节点
+        if (mutation.addedNodes.length === 0) {
+          return;
+        }
         mutation.addedNodes.forEach((node) => {
           let blackOperationLi = $(node).find(
             "div.h-action>div.h-add-to-black>ul>li:nth-of-type(1)"
+          );
+          let blackOperationUl = $(node).find(
+            "div.h-action>div.h-add-to-black>ul"
           );
           let followButton = $(node).find("div.h-action>span.h-unfollow");
           if (blackOperationLi[0]) {
@@ -1228,6 +1245,7 @@
               blackOperationLi.on({
                 click: addToBlackListClickHandler,
               });
+              changeDialogAndBlackReasonButton(false);
             } else if (blackOperationLi.html().includes("移除黑名单")) {
               blackOperationLi.on({
                 click: removeFromBlackListClickHandler,
@@ -1235,6 +1253,7 @@
               followButton.on({
                 click: removeFromBlackListClickHandler,
               });
+              changeDialogAndBlackReasonButton(true);
             } else {
               showMDCSnackbar("无法识别操作，请考虑报告错误");
             }
@@ -1285,15 +1304,7 @@
           </span>
           </label>
           </div>
-          <div class="mdc-dialog__actions">
-          <button id="blackReasonDialogCancelButton" type="button" class="mdc-button mdc-dialog__button">
-          <div class="mdc-button__ripple"></div>
-          <span class="mdc-button__label">取消</span>
-          </button>
-          <button id="blackReasonDialogConfirmButton" type="button" class="mdc-button mdc-dialog__button">
-          <div class="mdc-button__ripple"></div>
-          <span class="mdc-button__label">确认</span>
-          </button>
+          <div id="blackReasonDialogActions" class="mdc-dialog__actions">
           </div>
           </div>
           </div>
@@ -1318,6 +1329,44 @@
         // console.log(dialog.scrimClickAction);
         MDCDialog.scrimClickAction = "";
         MDCDialog.escapeKeyAction = "";
+      }, 0);
+    });
+
+    function changeDialogAndBlackReasonButton(userInBlackList) {
+      if (userInBlackList) {
+        $("#blackReasonDialogActions").html(`
+          <button id="blackReasonDialogOkButton" type="button" class="mdc-button mdc-dialog__button">
+          <div class="mdc-button__ripple"></div>
+          <span class="mdc-button__label">确定</span>
+          </button>`);
+        let blackReasonButton = $("div.h-action>div.h-add-to-black>ul").append(
+          `<li id="BlackReasonButton" class="be-dropdown-item">拉黑原因</li>`
+        );
+        blackReasonButton.on({
+          click: () => {
+            let blockReason = blockReasonController.getReason(mid);
+            $("#blackUrlInput").val(blockReason.url);
+            $("#blackReasonTextArea").val(blockReason.content);
+            MDCDialog.open();
+            $("#blackReasonTextArea").focus();
+          },
+        });
+        $("#blackReasonDialogOkButton").on({
+          click: function () {
+            MDCDialog.close();
+          },
+        });
+      } else {
+        $("#blackReasonDialogActions").html(`
+          <button id="blackReasonDialogCancelButton" type="button" class="mdc-button mdc-dialog__button">
+          <div class="mdc-button__ripple"></div>
+          <span class="mdc-button__label">取消</span>
+          </button>
+          <button id="blackReasonDialogConfirmButton" type="button" class="mdc-button mdc-dialog__button">
+          <div class="mdc-button__ripple"></div>
+          <span class="mdc-button__label">确定</span>
+          </button>`);
+        $("#BlackReasonButton").remove();
         $("#blackReasonDialogCancelButton").on({
           click: function () {
             console.log("CLICK");
@@ -1335,14 +1384,6 @@
             console.log("CLICK");
             let url = $("#blackUrlInput").val();
             let content = $("#blackReasonTextArea").val();
-            // console.log("mid");
-            // console.log(mid);
-            // console.log("url");
-            // console.log(url);
-            // console.log("type");
-            // console.log("barrage");
-            // console.log("content");
-            // console.log(content);
             let blackConfirmDialog = $("body>div.modal-container");
             blackConfirmDialog.each((index, element) => {
               if ($(element).css("display") !== "none") {
@@ -1369,8 +1410,9 @@
                   followButton.on({
                     click: removeFromBlackListClickHandler,
                   });
-                  blockReason.addReason(mid, url, "barrage", content);
+                  blockReasonController.addReason(mid, url, "barrage", content);
                   showMDCSnackbar("添加拉黑理由完成");
+                  changeDialogAndBlackReasonButton(true);
                 } else {
                   showMDCSnackbar(resultObj.message);
                 }
@@ -1378,8 +1420,9 @@
             });
           },
         });
-      }, 0);
-    });
+      }
+    }
+
     function removeFromBlackListClickHandler() {
       $(document).one({
         relationModifyXHRResponse: (event, resultObj) => {
@@ -1394,8 +1437,9 @@
             blackOperationLi.on({
               click: addToBlackListClickHandler,
             });
-            blockReason.removeReason(mid);
+            blockReasonController.removeReason(mid);
             showMDCSnackbar("删除拉黑理由完成");
+            changeDialogAndBlackReasonButton(false);
           } else {
             showMDCSnackbar(resultObj.message);
           }
