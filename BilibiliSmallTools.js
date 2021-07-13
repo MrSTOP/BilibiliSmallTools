@@ -584,6 +584,19 @@
                                 </div>
                             </div>
                         </li>
+                        <li class="mdc-list-item" role="switch">
+                            <span class="mdc-list-item__graphic">
+                                <div id="SettingShowSettingButton" class="mdc-switch">
+                                    <div class="mdc-switch__track"></div>
+                                    <div class="mdc-switch__thumb-underlay">
+                                        <div class="mdc-switch__thumb">
+                                            <input type="checkbox" id="SettingShowSettingButtonInput" class="mdc-switch__native-control">
+                                        </div>
+                                    </div>
+                                </div>
+                            </span>
+                            <label class="mdc-list-item__text" for="SettingBangumiAutoPlayInput">是否在页面上显示设置按钮</label>
+                        </li>
                     </ul>
                 </div>
                 <div class="mdc-dialog__actions">
@@ -633,6 +646,7 @@
       let jQ_SettingButtonTopPositionManualInput = $(
         "#SettingSettingButtonTopPositionManualInput"
       );
+      let jQ_ShowSettingButtonSwitch = $("#SettingShowSettingButton");
 
       let skipChargeSwitch = mdc.switchControl.MDCSwitch.attachTo(
         jQ_SkipChargeSwitch[0]
@@ -662,6 +676,9 @@
       );
       let settingButtonTopPositionSlider = mdc.slider.MDCSlider.attachTo(
         jQ_SettingButtonTopPositionSlider[0]
+      );
+      let showSettingButtonSwitch = mdc.switchControl.MDCSwitch.attachTo(
+        jQ_ShowSettingButtonSwitch[0]
       );
 
       MDCDialog.listen("MDCDialog:opened", () => {
@@ -770,6 +787,7 @@
       let settingButtonTopPosition = currentSettings.settingButtonTopPosition;
       settingButtonTopPositionSlider.setValue(settingButtonTopPosition);
       jQ_SettingButtonTopPositionManualInput.val(settingButtonTopPosition);
+      showSettingButtonSwitch.checked = currentSettings.showSettingButton;
 
       $("#SettingDialogCancelButton").on({
         click: () => {
@@ -793,6 +811,7 @@
             settingButtonRightPositionSlider.getValue();
           currentSettings.settingButtonTopPosition =
             settingButtonTopPositionSlider.getValue();
+          currentSettings.showSettingButton = showSettingButtonSwitch.checked;
           settingsStorage.saveSettings(currentSettings);
           showMDCSnackbar("设置保存成功");
           MDCDialog.close();
@@ -871,6 +890,9 @@
 
   let VIDEO_PAGE_PLAY_LIST_OBJ;
   function onVideoPage() {
+    GM_registerMenuCommand("设置", () => {
+      injectSettingDialog(true);
+    });
     let observer = new MutationObserver((mutationRecords, instance) => {
       mutationRecords.forEach((mutationRecord) => {
         //没有添加节点
@@ -946,6 +968,7 @@
       if (currentSettings.showSettingButton) {
         injectSettingButton();
       }
+      console.log("无需注入设置按钮");
     });
 
     $(document).on({
