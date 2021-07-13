@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name               哔哩哔哩 小功能
 // @namespace          https://github.com/MrSTOP
-// @version            0.4.7.6
+// @version            0.4.7.7
 // @description        记录为什么屏蔽了此人，支持导入导出。添加自动跳过充电页面功能，调整B站恶心的自动连播功能
 // @author             MrSTOP
 // @license            GPLv3
@@ -16,6 +16,7 @@
 // @grant              GM_removeValueChangeListener
 // @grant              GM_addStyle
 // @grant              GM_getResourceText
+// @grant              GM_registerMenuCommand
 // @require            https://greasyfork.org/scripts/31539-singletondata/code/SingletonData.js
 // @require            https://cdn.jsdelivr.net/npm/jquery/dist/jquery.min.js
 // @require            https://unpkg.com/material-components-web@latest/dist/material-components-web.min.js
