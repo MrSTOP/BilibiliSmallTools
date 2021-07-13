@@ -29,3 +29,7 @@
 功能设置对话框
 
 ![功能设置对话框示意图](./SettingDialog.jpg)
+
+脚本管理器设置入口
+
+![脚本管理器设置入口](./ScriptManagerSettingEntrance.jpg)
