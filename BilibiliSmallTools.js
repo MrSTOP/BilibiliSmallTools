@@ -88,9 +88,9 @@
 (function () {
   "use strict";
 
-  let MDCSnackbar;
-  let jQ_MDCSnackbar;
-  let MDCDialog;
+  let MDCSnackbar = null;
+  let jQ_MDCSnackbar = null;
+  let MDCDialog = null;
   let DEFAULT_SETTING = {
     skipCharge: true,
     autoPlayChange: true,
@@ -104,6 +104,10 @@
   };
   // let uid = document.cookie.match(/(?<=DedeUserID=).+?(?=;)/)[0];
   let crsfToken = document.cookie.match(/(?<=bili_jct=).+?(?=;)/)[0];
+
+  function xmlEscape(s) {
+    return $("<div/>").text(s).html();
+  }
 
   GM_addStyle(GM_getResourceText("material-component-web"));
   class BlockController {
@@ -354,102 +358,76 @@
       "}" +
       ".bilibili-small-tools-setting-button:hover{opacity:1}"
   );
-  function xmlEscape(s) {
-    return $("<div/>").text(s).html();
-  }
   let blackListRegEx = /https\:\/\/account\.bilibili\.com\/account\/blacklist/;
   let spaceRegEx = /https:\/\/space\.bilibili\.com\/[0-9]+/;
   let midFromSpaceUrlRegEx = /[0-9]+/;
+
+  function injectMDCSnackbar() {
+    if (MDCSnackbar !== null) {
+      console.log("MDCSnackbar已注入，无需再次注入");
+      return;
+    }
+    $("body").prepend(
+      `<div id="MDCSnackbar" class="mdc-snackbar" style="top: 0;bottom: inherit;z-index: 10001">
+        <div class="mdc-snackbar__surface" role="status" aria-relevant="additions">
+          <div class="mdc-snackbar__label" aria-atomic="false"></div>
+          <div class="mdc-snackbar__actions" aria-atomic="true"></div>
+        </div>
+      </div>`
+    );
+    //JQuery prepend不太稳定，等待JQuery注入完成
+    // setTimeout(() => {
+    jQ_MDCSnackbar = $("#MDCSnackbar");
+    MDCSnackbar = mdc.snackbar.MDCSnackbar.attachTo(jQ_MDCSnackbar[0]);
+    console.log("MDCSnackbar注入完成");
+    // }, 0);
+  }
 
   function showMDCSnackbar(info) {
     MDCSnackbar.close();
     $(jQ_MDCSnackbar).find(".mdc-snackbar__label").html(info);
     MDCSnackbar.open();
   }
-  let VIDEO_PAGE_PLAY_LIST_OBJ;
-  function onVideoPage() {
-    let observer = new MutationObserver((mutationRecords, instance) => {
-      mutationRecords.forEach((mutationRecord) => {
-        //没有添加节点
-        if (mutationRecord.addedNodes.length === 0) {
-          return;
-        }
-        if (
-          $(".bilibili-player-electric-panel-jump-content").length !== 0 &&
-          currentSettings.skipCharge
-        ) {
-          //console.log(mutationRecord);
-          $(".bilibili-player-electric-panel-jump-content")[0].click();
-          console.log("跳过充电");
-        }
-        mutationRecord.addedNodes.forEach((node) => {
-          if (
-            $(node).hasClass("bilibili-player-video-btn-setting") &&
-            currentSettings.autoPlayChange
-          ) {
-            $("body .bilibili-player-video-btn-setting")[0].dispatchEvent(
-              new Event("mouseover")
-            );
-            $("body .bilibili-player-video-btn-setting")[0].dispatchEvent(
-              new Event("mouseout")
-            );
-            if (currentSettings.bangumiAutoPlay) {
-              $(
-                "body .bilibili-player-video-btn-setting-right-playtype-content>div>div>label:nth-of-type(1)"
-              )[0].click();
-              console.log("已开启自动切集");
-            } else {
-              $(
-                "body .bilibili-player-video-btn-setting-right-playtype-content>div>div>label:nth-of-type(2)"
-              )[0].click();
-              console.log("已开启播完暂停");
-            }
-          }
-          if ($(node).hasClass("list-item")) {
-            $(node).find("li.blacklist").on({
-              click: blackButtonClickHandler,
-            });
-          }
-          if ($(node).hasClass("comment-bilibili-blacklist")) {
-            $(node).find("a.blacklist-confirm").on({
-              click: confirmBlackClickHandler,
-            });
-          }
-        });
-      });
-      //   let blackButton = $("div.comment-list div.opera-list>ul>li.blacklist");
-      //   if (blackButton[0]) {
-      //     blackButton.off("click", blackButtonClickHandler);
-      //     blackButton.on({
-      //       click: blackButtonClickHandler,
-      //     });
-      //   }
-      //   let blackListConfirm = $(".comment-bilibili-blacklist");
-      //   if (blackListConfirm[0]) {
-      //     blackListConfirm.off("click", confirmBlackClickHandler);
-      //     let btn = $(".comment-bilibili-blacklist .comment-bilibili-con .blacklist-confirm");
-      //     btn.on({
-      //       click: confirmBlackClickHandler,
-      //     });
-      //   }
-    });
-    observer.observe(document, {
-      childList: true,
-      subtree: true,
-    });
 
-    $("body").ready(() => {
-      $("body").prepend(
-        `<div class="bilibili-small-tools-setting" id="OpenSettingDialogButtonWrapper">
+  function injectSettingButton() {
+    $("body").prepend(
+      `<div class="bilibili-small-tools-setting" id="OpenSettingDialogButtonWrapper">
         <button id="OpenSettingDialogButton" class="mdc-icon-button bilibili-small-tools-setting-button" data-tooltip-id="AutoPlaySettingButtonTooltip" aria-label="toggle favorite" data-tooltip-id="tooltip-id">
           <svg xmlns="http://www.w3.org/2000/svg" enable-background="new 0 0 24 24" height="24px" viewBox="0 0 24 24" width="24px" fill="#000000"><g><path d="M0,0h24v24H0V0z" fill="none"/><path d="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.07-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61 l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41 h-3.84c-0.24,0-0.43,0.17-0.47,0.41L9.25,5.35C8.66,5.59,8.12,5.92,7.63,6.29L5.24,5.33c-0.22-0.08-0.47,0-0.59,0.22L2.74,8.87 C2.62,9.08,2.66,9.34,2.86,9.48l2.03,1.58C4.84,11.36,4.8,11.69,4.8,12s0.02,0.64,0.07,0.94l-2.03,1.58 c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.36,2.54 c0.05,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.44-0.17,0.47-0.41l0.36-2.54c0.59-0.24,1.13-0.56,1.62-0.94l2.39,0.96 c0.22,0.08,0.47,0,0.59-0.22l1.92-3.32c0.12-0.22,0.07-0.47-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6 s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z"/></g></svg>
         </button>
         <div id="AutoPlaySettingButtonTooltip" class="mdc-tooltip" role="tooltip"  data-mdc-tooltip-persist="false" aria-hidden="true">
         <div class= "mdc-tooltip__surface">自动播放设置</div>
         </div>
-        </div>
+        </div>`
+    );
+    setTimeout(() => {
+      let tooltip = mdc.tooltip.MDCTooltip.attachTo(
+        $("#AutoPlaySettingButtonTooltip")[0]
+      );
+      $("#OpenSettingDialogButton").on({
+        click: () => {
+          injectSettingDialog(true);
+        },
+        mouseenter: () => {
+          $("#AutoPlaySettingButtonTooltip").show();
+        },
+        mouseleave: () => {
+          $("#AutoPlaySettingButtonTooltip").hide();
+        },
+      });
 
-        <div id="AutoPlaySettingDialog" class="mdc-dialog" style="z-index: 1001">
+      console.log("设置按钮注入完成");
+    }, 0);
+  }
+
+  function injectSettingDialog(openAfterInject) {
+    if (MDCDialog !== null) {
+      console.log("设置MDCDialog已注入，无需再次注入");
+
+      return;
+    } else {
+      $("body").prepend(
+        `<div id="AutoPlaySettingDialog" class="mdc-dialog" style="z-index: 1001">
         <div class="mdc-dialog__container">
         <div class="mdc-dialog__surface" role="alertdialog" aria-modal="true" aria-labelledby="AutoPlaySettingDialogTitle" aria-describedby="my-dialog-content">
         <h2 class="mdc-dialog__title" id="AutoPlaySettingDialogTitle">自动播放设置</h2>
@@ -593,244 +571,290 @@
         </div>
         </div>
         <div class="mdc-dialog__scrim"></div>
-        </div>
-        <div id="MDCSnackbar" class="mdc-snackbar" style="top: 0;bottom: inherit;z-index: 10001">
-        <div class="mdc-snackbar__surface" role="status" aria-relevant="additions">
-        <div class="mdc-snackbar__label" aria-atomic="false"></div>
-        <div class="mdc-snackbar__actions" aria-atomic="true">
-        </div>
-        </div>
         </div>`
       );
-      //JQuery prepend不太稳定，等待JQuery注入完成
-      setTimeout(() => {
-        jQ_MDCSnackbar = $("#MDCSnackbar");
-        MDCSnackbar = mdc.snackbar.MDCSnackbar.attachTo(jQ_MDCSnackbar[0]);
-        MDCDialog = mdc.dialog.MDCDialog.attachTo(
-          $("#AutoPlaySettingDialog")[0]
-        );
-        let settingList = mdc.list.MDCList.attachTo(
-          $("#AutoPlaySettingOptionList")[0]
-        );
-        let tooltip = mdc.tooltip.MDCTooltip.attachTo(
-          $("#AutoPlaySettingButtonTooltip")[0]
-        );
-        let jQ_SkipChargeSwitch = $("#SettingSkipCharge");
-        let jQ_AutoPlayChangeSwitch = $("#SettingAutoPlayChange");
-        let jQ_SingleVideoAutoPlayRecommendSwitch = $(
-          "#SettingSingleVideoAutoPlayRecommend"
-        );
-        let jQ_MultipartVideoAutoPlaySwitch = $(
-          "#SettingMultipartVideoAutoPlay"
-        );
-        let jQ_MultipartVideoAutoPlayRecommendSwitch = $(
-          "#SettingMultipartVideoAutoPlayRecommend"
-        );
-        let jQ_BangumiAutoPlaySwitch = $("#SettingBangumiAutoPlay");
-        let jQ_SettingButtonOpacitySlider = $("#SettingSettingButtonOpacity");
-        let jQ_SettingButtonOpacityManualInput = $(
-          "#SettingSettingButtonOpacityManualInput"
-        );
-        let jQ_SettingButtonRightPositionSlider = $(
-          "#SettingSettingButtonRightPosition"
-        );
-        let jQ_SettingButtonRightPositionManualInput = $(
-          "#SettingSettingButtonRightPositionManualInput"
-        );
-        let jQ_SettingButtonTopPositionSlider = $(
-          "#SettingSettingButtonTopPosition"
-        );
-        let jQ_SettingButtonTopPositionManualInput = $(
-          "#SettingSettingButtonTopPositionManualInput"
-        );
+      // setTimeout(() => {
+      MDCDialog = mdc.dialog.MDCDialog.attachTo($("#AutoPlaySettingDialog")[0]);
+      let settingList = mdc.list.MDCList.attachTo(
+        $("#AutoPlaySettingOptionList")[0]
+      );
 
-        let skipChargeSwitch = mdc.switchControl.MDCSwitch.attachTo(
-          jQ_SkipChargeSwitch[0]
-        );
-        let autoPlayChangeSwitch = mdc.switchControl.MDCSwitch.attachTo(
-          jQ_AutoPlayChangeSwitch[0]
-        );
-        let singleVideoAutoPlayRecommendSwitch =
-          mdc.switchControl.MDCSwitch.attachTo(
-            jQ_SingleVideoAutoPlayRecommendSwitch[0]
-          );
-        let multipartVideoAutoPlaySwitch = mdc.switchControl.MDCSwitch.attachTo(
-          jQ_MultipartVideoAutoPlaySwitch[0]
-        );
-        let multipartVideoAutoPlayRecommendSwitch =
-          mdc.switchControl.MDCSwitch.attachTo(
-            jQ_MultipartVideoAutoPlayRecommendSwitch[0]
-          );
-        let bangumiAutoPlaySwitch = mdc.switchControl.MDCSwitch.attachTo(
-          jQ_BangumiAutoPlaySwitch[0]
-        );
-        let settingButtonOpacitySlider = mdc.slider.MDCSlider.attachTo(
-          jQ_SettingButtonOpacitySlider[0]
-        );
-        let settingButtonRightPositionSlider = mdc.slider.MDCSlider.attachTo(
-          jQ_SettingButtonRightPositionSlider[0]
-        );
-        let settingButtonTopPositionSlider = mdc.slider.MDCSlider.attachTo(
-          jQ_SettingButtonTopPositionSlider[0]
-        );
+      let jQ_SkipChargeSwitch = $("#SettingSkipCharge");
+      let jQ_AutoPlayChangeSwitch = $("#SettingAutoPlayChange");
+      let jQ_SingleVideoAutoPlayRecommendSwitch = $(
+        "#SettingSingleVideoAutoPlayRecommend"
+      );
+      let jQ_MultipartVideoAutoPlaySwitch = $("#SettingMultipartVideoAutoPlay");
+      let jQ_MultipartVideoAutoPlayRecommendSwitch = $(
+        "#SettingMultipartVideoAutoPlayRecommend"
+      );
+      let jQ_BangumiAutoPlaySwitch = $("#SettingBangumiAutoPlay");
+      let jQ_SettingButtonOpacitySlider = $("#SettingSettingButtonOpacity");
+      let jQ_SettingButtonOpacityManualInput = $(
+        "#SettingSettingButtonOpacityManualInput"
+      );
+      let jQ_SettingButtonRightPositionSlider = $(
+        "#SettingSettingButtonRightPosition"
+      );
+      let jQ_SettingButtonRightPositionManualInput = $(
+        "#SettingSettingButtonRightPositionManualInput"
+      );
+      let jQ_SettingButtonTopPositionSlider = $(
+        "#SettingSettingButtonTopPosition"
+      );
+      let jQ_SettingButtonTopPositionManualInput = $(
+        "#SettingSettingButtonTopPositionManualInput"
+      );
 
-        MDCDialog.listen("MDCDialog:opened", () => {
-          settingButtonOpacitySlider.layout();
-          settingButtonRightPositionSlider.layout();
-          settingButtonTopPositionSlider.layout();
-        });
+      let skipChargeSwitch = mdc.switchControl.MDCSwitch.attachTo(
+        jQ_SkipChargeSwitch[0]
+      );
+      let autoPlayChangeSwitch = mdc.switchControl.MDCSwitch.attachTo(
+        jQ_AutoPlayChangeSwitch[0]
+      );
+      let singleVideoAutoPlayRecommendSwitch =
+        mdc.switchControl.MDCSwitch.attachTo(
+          jQ_SingleVideoAutoPlayRecommendSwitch[0]
+        );
+      let multipartVideoAutoPlaySwitch = mdc.switchControl.MDCSwitch.attachTo(
+        jQ_MultipartVideoAutoPlaySwitch[0]
+      );
+      let multipartVideoAutoPlayRecommendSwitch =
+        mdc.switchControl.MDCSwitch.attachTo(
+          jQ_MultipartVideoAutoPlayRecommendSwitch[0]
+        );
+      let bangumiAutoPlaySwitch = mdc.switchControl.MDCSwitch.attachTo(
+        jQ_BangumiAutoPlaySwitch[0]
+      );
+      let settingButtonOpacitySlider = mdc.slider.MDCSlider.attachTo(
+        jQ_SettingButtonOpacitySlider[0]
+      );
+      let settingButtonRightPositionSlider = mdc.slider.MDCSlider.attachTo(
+        jQ_SettingButtonRightPositionSlider[0]
+      );
+      let settingButtonTopPositionSlider = mdc.slider.MDCSlider.attachTo(
+        jQ_SettingButtonTopPositionSlider[0]
+      );
 
-        settingButtonOpacitySlider.listen("MDCSlider:input", (event) => {
-          jQ_SettingButtonOpacityManualInput.val(event.detail.value);
-          $("#OpenSettingDialogButton").css(
-            "opacity",
-            event.detail.value / 1000
-          );
-        });
-        jQ_SettingButtonOpacityManualInput.on({
-          input: () => {
-            let opacityValue = jQ_SettingButtonOpacityManualInput.val();
-            opacityValue = opacityValue < 0 ? 0 : opacityValue;
-            opacityValue = opacityValue > 1000 ? 1000 : opacityValue;
-            jQ_SettingButtonOpacityManualInput.val(opacityValue);
-            settingButtonOpacitySlider.setValue(opacityValue);
-            $("#OpenSettingDialogButton").css("opacity", opacityValue / 1000);
-          },
-        });
-        settingButtonRightPositionSlider.listen("MDCSlider:input", (event) => {
-          jQ_SettingButtonRightPositionManualInput.val(event.detail.value);
+      MDCDialog.listen("MDCDialog:opened", () => {
+        settingButtonOpacitySlider.layout();
+        settingButtonRightPositionSlider.layout();
+        settingButtonTopPositionSlider.layout();
+      });
+
+      settingButtonOpacitySlider.listen("MDCSlider:input", (event) => {
+        jQ_SettingButtonOpacityManualInput.val(event.detail.value);
+        $("#OpenSettingDialogButton").css("opacity", event.detail.value / 1000);
+      });
+      jQ_SettingButtonOpacityManualInput.on({
+        input: () => {
+          let opacityValue = jQ_SettingButtonOpacityManualInput.val();
+          opacityValue = opacityValue < 0 ? 0 : opacityValue;
+          opacityValue = opacityValue > 1000 ? 1000 : opacityValue;
+          jQ_SettingButtonOpacityManualInput.val(opacityValue);
+          settingButtonOpacitySlider.setValue(opacityValue);
+          $("#OpenSettingDialogButton").css("opacity", opacityValue / 1000);
+        },
+      });
+      settingButtonRightPositionSlider.listen("MDCSlider:input", (event) => {
+        jQ_SettingButtonRightPositionManualInput.val(event.detail.value);
+        $("#OpenSettingDialogButtonWrapper").css(
+          "right",
+          event.detail.value / 10 + "%"
+        );
+      });
+      jQ_SettingButtonRightPositionManualInput.on({
+        input: () => {
+          let rightPositionValue =
+            jQ_SettingButtonRightPositionManualInput.val();
+          rightPositionValue = rightPositionValue < 0 ? 0 : rightPositionValue;
+          rightPositionValue =
+            rightPositionValue > 1000 ? 1000 : rightPositionValue;
+          jQ_SettingButtonRightPositionManualInput.val(rightPositionValue);
+          settingButtonRightPositionSlider.setValue(rightPositionValue);
           $("#OpenSettingDialogButtonWrapper").css(
             "right",
-            event.detail.value / 10 + "%"
+            rightPositionValue / 10 + "%"
           );
-        });
-        jQ_SettingButtonRightPositionManualInput.on({
-          input: () => {
-            let rightPositionValue =
-              jQ_SettingButtonRightPositionManualInput.val();
-            rightPositionValue =
-              rightPositionValue < 0 ? 0 : rightPositionValue;
-            rightPositionValue =
-              rightPositionValue > 1000 ? 1000 : rightPositionValue;
-            jQ_SettingButtonRightPositionManualInput.val(rightPositionValue);
-            settingButtonRightPositionSlider.setValue(rightPositionValue);
-            $("#OpenSettingDialogButtonWrapper").css(
-              "right",
-              rightPositionValue / 10 + "%"
-            );
-          },
-        });
-        settingButtonTopPositionSlider.listen("MDCSlider:input", (event) => {
-          jQ_SettingButtonTopPositionManualInput.val(event.detail.value);
+        },
+      });
+      settingButtonTopPositionSlider.listen("MDCSlider:input", (event) => {
+        jQ_SettingButtonTopPositionManualInput.val(event.detail.value);
+        $("#OpenSettingDialogButtonWrapper").css(
+          "top",
+          event.detail.value / 10 + "%"
+        );
+      });
+      jQ_SettingButtonTopPositionManualInput.on({
+        input: () => {
+          let topPositionValue = jQ_SettingButtonTopPositionManualInput.val();
+          topPositionValue = topPositionValue < 0 ? 0 : topPositionValue;
+          topPositionValue = topPositionValue > 1000 ? 1000 : topPositionValue;
+          jQ_SettingButtonTopPositionManualInput.val(topPositionValue);
+          settingButtonTopPositionSlider.setValue(topPositionValue);
           $("#OpenSettingDialogButtonWrapper").css(
             "top",
-            event.detail.value / 10 + "%"
+            topPositionValue / 10 + "%"
           );
-        });
-        jQ_SettingButtonTopPositionManualInput.on({
-          input: () => {
-            let topPositionValue = jQ_SettingButtonTopPositionManualInput.val();
-            topPositionValue = topPositionValue < 0 ? 0 : topPositionValue;
-            topPositionValue =
-              topPositionValue > 1000 ? 1000 : topPositionValue;
-            jQ_SettingButtonTopPositionManualInput.val(topPositionValue);
-            settingButtonTopPositionSlider.setValue(topPositionValue);
-            $("#OpenSettingDialogButtonWrapper").css(
-              "top",
-              topPositionValue / 10 + "%"
-            );
-          },
-        });
+        },
+      });
 
-        jQ_AutoPlayChangeSwitch.on({
-          change: () => {
-            if (autoPlayChangeSwitch.checked) {
-              settingList.setEnabled([2], true);
-              singleVideoAutoPlayRecommendSwitch.disabled = false;
-              settingList.setEnabled([3], true);
-              multipartVideoAutoPlaySwitch.disabled = false;
-              settingList.setEnabled([4], true);
-              multipartVideoAutoPlayRecommendSwitch.disabled = false;
-              settingList.setEnabled([5], true);
-              bangumiAutoPlaySwitch.disabled = false;
+      jQ_AutoPlayChangeSwitch.on({
+        change: () => {
+          if (autoPlayChangeSwitch.checked) {
+            settingList.setEnabled([2], true);
+            singleVideoAutoPlayRecommendSwitch.disabled = false;
+            settingList.setEnabled([3], true);
+            multipartVideoAutoPlaySwitch.disabled = false;
+            settingList.setEnabled([4], true);
+            multipartVideoAutoPlayRecommendSwitch.disabled = false;
+            settingList.setEnabled([5], true);
+            bangumiAutoPlaySwitch.disabled = false;
+          } else {
+            settingList.setEnabled([2], false);
+            singleVideoAutoPlayRecommendSwitch.disabled = true;
+            settingList.setEnabled([3], false);
+            multipartVideoAutoPlaySwitch.disabled = true;
+            settingList.setEnabled([4], false);
+            multipartVideoAutoPlayRecommendSwitch.disabled = true;
+            settingList.setEnabled([5], false);
+            bangumiAutoPlaySwitch.disabled = true;
+          }
+        },
+      });
+
+      skipChargeSwitch.checked = currentSettings.skipCharge;
+      autoPlayChangeSwitch.checked = currentSettings.autoPlayChange;
+      singleVideoAutoPlayRecommendSwitch.checked =
+        currentSettings.singleVideoAutoPlayRecommend;
+      multipartVideoAutoPlaySwitch.checked =
+        currentSettings.multipartVideoAutoPlay;
+      multipartVideoAutoPlayRecommendSwitch.checked =
+        currentSettings.multipartVideoAutoPlayRecommend;
+      bangumiAutoPlaySwitch.checked = currentSettings.bangumiAutoPlay;
+      let settingButtonOpacity = currentSettings.settingButtonOpacity;
+      settingButtonOpacitySlider.setValue(settingButtonOpacity);
+      jQ_SettingButtonOpacityManualInput.val(settingButtonOpacity);
+      let settingButtonRightPosition =
+        currentSettings.settingButtonRightPosition;
+      settingButtonRightPositionSlider.setValue(settingButtonRightPosition);
+      jQ_SettingButtonRightPositionManualInput.val(settingButtonRightPosition);
+      let settingButtonTopPosition = currentSettings.settingButtonTopPosition;
+      settingButtonTopPositionSlider.setValue(settingButtonTopPosition);
+      jQ_SettingButtonTopPositionManualInput.val(settingButtonTopPosition);
+
+      $("#SettingDialogCancelButton").on({
+        click: () => {
+          MDCDialog.close();
+        },
+      });
+      $("#SettingDialogConfirmButton").on({
+        click: () => {
+          currentSettings.skipCharge = skipChargeSwitch.checked;
+          currentSettings.autoPlayChange = autoPlayChangeSwitch.checked;
+          currentSettings.singleVideoAutoPlayRecommend =
+            singleVideoAutoPlayRecommendSwitch.checked;
+          currentSettings.multipartVideoAutoPlay =
+            multipartVideoAutoPlaySwitch.checked;
+          currentSettings.multipartVideoAutoPlayRecommend =
+            multipartVideoAutoPlayRecommendSwitch.checked;
+          currentSettings.bangumiAutoPlay = bangumiAutoPlaySwitch.checked;
+          currentSettings.settingButtonOpacity =
+            settingButtonOpacitySlider.getValue();
+          currentSettings.settingButtonRightPosition =
+            settingButtonRightPositionSlider.getValue();
+          currentSettings.settingButtonTopPosition =
+            settingButtonTopPositionSlider.getValue();
+          settingsStorage.saveSettings(currentSettings);
+          showMDCSnackbar("设置保存成功");
+          MDCDialog.close();
+        },
+      });
+
+      showMDCSnackbar("设置加载成功");
+      console.log("设置MDCDialog注入完成");
+      // }, 0);
+    }
+    if (openAfterInject) {
+      MDCDialog.open();
+    }
+  }
+
+  let VIDEO_PAGE_PLAY_LIST_OBJ;
+  function onVideoPage() {
+    let observer = new MutationObserver((mutationRecords, instance) => {
+      mutationRecords.forEach((mutationRecord) => {
+        //没有添加节点
+        if (mutationRecord.addedNodes.length === 0) {
+          return;
+        }
+        if (
+          $(".bilibili-player-electric-panel-jump-content").length !== 0 &&
+          currentSettings.skipCharge
+        ) {
+          //console.log(mutationRecord);
+          $(".bilibili-player-electric-panel-jump-content")[0].click();
+          console.log("跳过充电");
+        }
+        mutationRecord.addedNodes.forEach((node) => {
+          if (
+            $(node).hasClass("bilibili-player-video-btn-setting") &&
+            currentSettings.autoPlayChange
+          ) {
+            $("body .bilibili-player-video-btn-setting")[0].dispatchEvent(
+              new Event("mouseover")
+            );
+            $("body .bilibili-player-video-btn-setting")[0].dispatchEvent(
+              new Event("mouseout")
+            );
+            if (currentSettings.bangumiAutoPlay) {
+              $(
+                "body .bilibili-player-video-btn-setting-right-playtype-content>div>div>label:nth-of-type(1)"
+              )[0].click();
+              console.log("已开启自动切集");
             } else {
-              settingList.setEnabled([2], false);
-              singleVideoAutoPlayRecommendSwitch.disabled = true;
-              settingList.setEnabled([3], false);
-              multipartVideoAutoPlaySwitch.disabled = true;
-              settingList.setEnabled([4], false);
-              multipartVideoAutoPlayRecommendSwitch.disabled = true;
-              settingList.setEnabled([5], false);
-              bangumiAutoPlaySwitch.disabled = true;
+              $(
+                "body .bilibili-player-video-btn-setting-right-playtype-content>div>div>label:nth-of-type(2)"
+              )[0].click();
+              console.log("已开启播完暂停");
             }
-          },
+          }
+          if ($(node).hasClass("list-item")) {
+            $(node).find("li.blacklist").on({
+              click: blackButtonClickHandler,
+            });
+          }
+          if ($(node).hasClass("comment-bilibili-blacklist")) {
+            $(node).find("a.blacklist-confirm").on({
+              click: confirmBlackClickHandler,
+            });
+          }
         });
-        $("#OpenSettingDialogButton").on({
-          click: () => {
-            skipChargeSwitch.checked = currentSettings.skipCharge;
-            autoPlayChangeSwitch.checked = currentSettings.autoPlayChange;
-            singleVideoAutoPlayRecommendSwitch.checked =
-              currentSettings.singleVideoAutoPlayRecommend;
-            multipartVideoAutoPlaySwitch.checked =
-              currentSettings.multipartVideoAutoPlay;
-            multipartVideoAutoPlayRecommendSwitch.checked =
-              currentSettings.multipartVideoAutoPlayRecommend;
-            bangumiAutoPlaySwitch.checked = currentSettings.bangumiAutoPlay;
-            let settingButtonOpacity = currentSettings.settingButtonOpacity;
-            settingButtonOpacitySlider.setValue(settingButtonOpacity);
-            jQ_SettingButtonOpacityManualInput.val(settingButtonOpacity);
-            let settingButtonRightPosition =
-              currentSettings.settingButtonRightPosition;
-            settingButtonRightPositionSlider.setValue(
-              settingButtonRightPosition
-            );
-            jQ_SettingButtonRightPositionManualInput.val(
-              settingButtonRightPosition
-            );
-            let settingButtonTopPosition =
-              currentSettings.settingButtonTopPosition;
-            settingButtonTopPositionSlider.setValue(settingButtonTopPosition);
-            jQ_SettingButtonTopPositionManualInput.val(
-              settingButtonTopPosition
-            );
-            showMDCSnackbar("设置加载成功");
-            MDCDialog.open();
-          },
-          mouseenter: () => {
-            $("#AutoPlaySettingButtonTooltip").show();
-          },
-          mouseleave: () => {
-            $("#AutoPlaySettingButtonTooltip").hide();
-          },
-        });
-        $("#SettingDialogCancelButton").on({
-          click: () => {
-            MDCDialog.close();
-          },
-        });
-        $("#SettingDialogConfirmButton").on({
-          click: () => {
-            currentSettings.skipCharge = skipChargeSwitch.checked;
-            currentSettings.autoPlayChange = autoPlayChangeSwitch.checked;
-            currentSettings.singleVideoAutoPlayRecommend =
-              singleVideoAutoPlayRecommendSwitch.checked;
-            currentSettings.multipartVideoAutoPlay =
-              multipartVideoAutoPlaySwitch.checked;
-            currentSettings.multipartVideoAutoPlayRecommend =
-              multipartVideoAutoPlayRecommendSwitch.checked;
-            currentSettings.bangumiAutoPlay = bangumiAutoPlaySwitch.checked;
-            currentSettings.settingButtonOpacity =
-              settingButtonOpacitySlider.getValue();
-            currentSettings.settingButtonRightPosition =
-              settingButtonRightPositionSlider.getValue();
-            currentSettings.settingButtonTopPosition =
-              settingButtonTopPositionSlider.getValue();
-            settingsStorage.saveSettings(currentSettings);
-            showMDCSnackbar("设置保存成功");
-            MDCDialog.close();
-          },
-        });
-      }, 0);
+      });
+      //   let blackButton = $("div.comment-list div.opera-list>ul>li.blacklist");
+      //   if (blackButton[0]) {
+      //     blackButton.off("click", blackButtonClickHandler);
+      //     blackButton.on({
+      //       click: blackButtonClickHandler,
+      //     });
+      //   }
+      //   let blackListConfirm = $(".comment-bilibili-blacklist");
+      //   if (blackListConfirm[0]) {
+      //     blackListConfirm.off("click", confirmBlackClickHandler);
+      //     let btn = $(".comment-bilibili-blacklist .comment-bilibili-con .blacklist-confirm");
+      //     btn.on({
+      //       click: confirmBlackClickHandler,
+      //     });
+      //   }
+    });
+    observer.observe(document, {
+      childList: true,
+      subtree: true,
+    });
+
+    $("body").ready(() => {
+      injectMDCSnackbar();
+      injectSettingButton();
     });
 
     $(document).on({
@@ -1060,6 +1084,7 @@
     });
 
     $("body").ready(() => {
+      injectMDCSnackbar();
       $("body").prepend(
         `<div id="blackReasonDialog" class="mdc-dialog" style="z-index:20001" aria-modal="true">
           <div class="mdc-dialog__container" style="width: 100%">
@@ -1077,26 +1102,17 @@
           </div>
           </div>
           </div>
-          <div class="mdc-dialog__scrim"></div></div>
-          <div id="MDCSnackbar" class="mdc-snackbar" style="top: 0;bottom: inherit;z-index: 1001">
-          <div class="mdc-snackbar__surface" role="status" aria-relevant="additions">
-          <div class="mdc-snackbar__label" aria-atomic="false">Can\'t send photo.Retry in 5 seconds.</div>
-          <div class="mdc-snackbar__actions" aria-atomic="true">
-          </div>
-          </div>
-          </div>`
+          <div class="mdc-dialog__scrim"></div></div>`
       );
       //JQuery prepend不太稳定，等待JQuery注入完成
-      setTimeout(() => {
-        jQ_MDCSnackbar = $("#MDCSnackbar");
-        MDCDialog = mdc.dialog.MDCDialog.attachTo($(".mdc-dialog")[0]);
-        MDCSnackbar = mdc.snackbar.MDCSnackbar.attachTo(jQ_MDCSnackbar[0]);
-        $("#blackReasonDialogConfirmButton").on({
-          click: function () {
-            MDCDialog.close();
-          },
-        });
-      }, 0);
+      // setTimeout(() => {
+      MDCDialog = mdc.dialog.MDCDialog.attachTo($(".mdc-dialog")[0]);
+      $("#blackReasonDialogConfirmButton").on({
+        click: function () {
+          MDCDialog.close();
+        },
+      });
+      // }, 0);
     });
     // snackbar.open();
     $(document).on({
@@ -1275,6 +1291,7 @@
       return;
     }
     $("body").ready(() => {
+      injectMDCSnackbar();
       $("body").prepend(
         `<div id="blackReasonDialog" class="mdc-dialog" style="z-index:20001" aria-modal="true">
           <div class="mdc-dialog__container" style="width: 100%">
@@ -1310,17 +1327,10 @@
           </div>
           </div>
           </div>
-          <div class="mdc-dialog__scrim"></div></div>
-          <div id="MDCSnackbar" class="mdc-snackbar" style="top: 0;bottom: inherit;z-index: 1001">
-          <div class="mdc-snackbar__surface" role="status" aria-relevant="additions">
-          <div class="mdc-snackbar__label" aria-atomic="false">Can\'t send photo.Retry in 5 seconds.</div>
-          </div>
-          </div>`
+          <div class="mdc-dialog__scrim"></div></div>`
       );
       //JQuery prepend不太稳定，等待JQuery注入完成
-      setTimeout(() => {
-        jQ_MDCSnackbar = $("#MDCSnackbar");
-        MDCSnackbar = mdc.snackbar.MDCSnackbar.attachTo(jQ_MDCSnackbar[0]);
+      // setTimeout(() => {
         $(".mdc-text-field").each((index, element) => {
           mdc.textField.MDCTextField.attachTo($(element)[0]);
         });
@@ -1331,7 +1341,7 @@
         // console.log(dialog.scrimClickAction);
         MDCDialog.scrimClickAction = "";
         MDCDialog.escapeKeyAction = "";
-      }, 0);
+      // }, 0);
     });
 
     function changeDialogAndBlackReasonButton(userInBlackList) {
