@@ -101,6 +101,7 @@
     settingButtonOpacity: 100,
     settingButtonRightPosition: 0,
     settingButtonTopPosition: 300,
+    showSettingButton: true,
   };
   // let uid = document.cookie.match(/(?<=DedeUserID=).+?(?=;)/)[0];
   let crsfToken = document.cookie.match(/(?<=bili_jct=).+?(?=;)/)[0];
@@ -345,6 +346,9 @@
     currentSettings.settingButtonTopPosition =
       DEFAULT_SETTING.settingButtonTopPosition;
   }
+  if (currentSettings.showSettingButton === undefined) {
+    currentSettings.showSettingButton = DEFAULT_SETTING.showSettingButton;
+  }
   /********************************************************************************/
   GM_addStyle(
     ".mdc-list-item{height:32px;padding:20px 0px 0px 14px}.mdc-list-item__text{padding-left:10px}" +
@@ -425,151 +429,177 @@
       console.log("设置MDCDialog已注入，无需再次注入");
     } else {
       $("body").prepend(
-        `<div id="AutoPlaySettingDialog" class="mdc-dialog" style="z-index: 1001">
+        `
+    <div id="AutoPlaySettingDialog" class="mdc-dialog" style="z-index: 1001">
         <div class="mdc-dialog__container">
-        <div class="mdc-dialog__surface" role="alertdialog" aria-modal="true" aria-labelledby="AutoPlaySettingDialogTitle" aria-describedby="my-dialog-content">
-        <h2 class="mdc-dialog__title" id="AutoPlaySettingDialogTitle">自动播放设置</h2>
-        
-        <div class="mdc-dialog__content" id="">
-        <ul id="AutoPlaySettingOptionList" class="mdc-list" role="group" aria-label="bilibili small tools setting">
-        <li class="mdc-list-item" role="switch" tabindex="1">
-        <span class="mdc-list-item__graphic">
-        <div id="SettingSkipCharge" class="mdc-switch">
-        <div class="mdc-switch__track"></div>
-        <div class="mdc-switch__thumb-underlay">
-        <div class="mdc-switch__thumb">
-        <input type="checkbox" id="SettingSkipChargeInput" class="mdc-switch__native-control">
-        </div>
-        </div>
-        </div>
-        </span>
-        <label class="mdc-list-item__text" for="SettingSkipChargeInput">是否自动跳过充电界面</label>
-        </li>
-        <li class="mdc-list-item" role="switch" tabindex="2">
-        <span class="mdc-list-item__graphic">
-        <div id="SettingAutoPlayChange" class="mdc-switch">
-        <div class="mdc-switch__track"></div>
-        <div class="mdc-switch__thumb-underlay">
-        <div class="mdc-switch__thumb">
-        <input type="checkbox" id="SettingAutoPlayChangeInput" class="mdc-switch__native-control">
-        </div>
-        </div>
-        </div>
-        </span>
-        <label class="mdc-list-item__text" for="SettingAutoPlayChangeInput">是否启用自动连播改变功能(注意以下四项设置仅在启用本设置后生效)</label>
-        </li>
-        <li class="mdc-list-item" role="switch" tabindex="3">
-        <span class="mdc-list-item__graphic">
-        <div id="SettingSingleVideoAutoPlayRecommend" class="mdc-switch">
-        <div class="mdc-switch__track"></div>
-        <div class="mdc-switch__thumb-underlay">
-        <div class="mdc-switch__thumb">
-        <input type="checkbox" id="SettingSingleVideoAutoPlayRecommendInput" class="mdc-switch__native-control">
-        </div>
-        </div>
-        </div>
-        </span>
-        <label class="mdc-list-item__text" for="SettingSingleVideoAutoPlayRecommendInput">单个视频是否启用自动连播</label>
-        </li>
-        <li class="mdc-list-item" role="switch" tabindex="4">
-        <span class="mdc-list-item__graphic">
-        <div id="SettingMultipartVideoAutoPlay" class="mdc-switch">
-        <div class="mdc-switch__track"></div>
-        <div class="mdc-switch__thumb-underlay">
-        <div class="mdc-switch__thumb">
-        <input type="checkbox" id="SettingMultipartVideoAutoPlayInput" class="mdc-switch__native-control">
-        </div>
-        </div>
-        </div>
-        </span>
-        <label class="mdc-list-item__text" for="SettingMultipartVideoAutoPlayInput">多P视频是否启用分P自动连播</label>
-        </li>
-        <li class="mdc-list-item" role="switch" tabindex="5">
-        <span class="mdc-list-item__graphic">
-        <div id="SettingMultipartVideoAutoPlayRecommend" class="mdc-switch">
-        <div class="mdc-switch__track"></div>
-        <div class="mdc-switch__thumb-underlay">
-        <div class="mdc-switch__thumb">
-        <input type="checkbox" id="SettingMultipartVideoAutoPlayRecommendInput" class="mdc-switch__native-control">
-        </div>
-        </div>
-        </div>
-        </span>
-        <label class="mdc-list-item__text" for="SettingMultipartVideoAutoPlayRecommendInput">多P视频是否启用推荐自动连播</label>
-        </li>
-        <li class="mdc-list-item" role="switch" tabindex="6">
-        <span class="mdc-list-item__graphic">
-        <div id="SettingBangumiAutoPlay" class="mdc-switch">
-        <div class="mdc-switch__track"></div>
-        <div class="mdc-switch__thumb-underlay">
-        <div class="mdc-switch__thumb">
-        <input type="checkbox" id="SettingBangumiAutoPlayInput" class="mdc-switch__native-control">
-        </div>
-        </div>
-        </div>
-        </span>
-        <label class="mdc-list-item__text" for="SettingBangumiAutoPlayInput">番剧是否启用自动切集</label>
-        </li>
-        </ul>
+            <div class="mdc-dialog__surface" role="alertdialog" aria-modal="true"
+                aria-labelledby="AutoPlaySettingDialogTitle" aria-describedby="my-dialog-content">
+                <h2 class="mdc-dialog__title" id="AutoPlaySettingDialogTitle">自动播放设置</h2>
 
-        <label class="mdc-list-item__text" for="SettingSettingButtonOpacity">设置按钮不透明度<input type="number" id="SettingSettingButtonOpacityManualInput" pattern="\d+"/></label>
-        
-          <div class="mdc-slider" id="SettingSettingButtonOpacity">
-            <input class="mdc-slider__input" type="range" id="SettingSettingButtonOpacityInput" min="0" max="1000" value="100" name="buttonOpacity">
-            <div class="mdc-slider__track">
-              <div class="mdc-slider__track--inactive"></div>
-              <div class="mdc-slider__track--active">
-                <div class="mdc-slider__track--active_fill"></div>
-              </div>
-            </div>
-            <div class="mdc-slider__thumb">
-              <div class="mdc-slider__thumb-knob"></div>
-            </div>
-          </div>
-        <label class="mdc-list-item__text" for="SettingSettingButtonRightPosition">设置按钮右侧偏移<input type="number" id="SettingSettingButtonRightPositionManualInput" pattern="\d+"/></label>
-        
-          <div class="mdc-slider" id="SettingSettingButtonRightPosition">
-            <input class="mdc-slider__input" type="range" id="SettingSettingButtonRightPositionInput" min="0" max="1000" value="5" name="buttonRightPosition">
-            <div class="mdc-slider__track">
-              <div class="mdc-slider__track--inactive"></div>
-              <div class="mdc-slider__track--active">
-                <div class="mdc-slider__track--active_fill"></div>
-              </div>
-            </div>
-            <div class="mdc-slider__thumb">
-              <div class="mdc-slider__thumb-knob"></div>
-            </div>
-          </div>
-        <label class="mdc-list-item__text" for="SettingSettingButtonTopPosition">设置按钮顶部偏移<input type="number" id="SettingSettingButtonTopPositionManualInput" pattern="\d+"/></label>
-        
-          <div class="mdc-slider" id="SettingSettingButtonTopPosition">
-            <input class="mdc-slider__input" type="range" id="SettingSettingButtonTopPositionInput" min="0" max="1000" value="300" name="buttonTopPosition">
-            <div class="mdc-slider__track">
-              <div class="mdc-slider__track--inactive"></div>
-              <div class="mdc-slider__track--active">
-                <div class="mdc-slider__track--active_fill"></div>
-              </div>
-            </div>
-            <div class="mdc-slider__thumb">
-              <div class="mdc-slider__thumb-knob"></div>
-            </div>
-          </div>
+                <div class="mdc-dialog__content" id="">
+                    <ul id="AutoPlaySettingOptionList" class="mdc-list" role="group"
+                        aria-label="bilibili small tools setting">
+                        <li class="mdc-list-item" role="switch">
+                            <span class="mdc-list-item__graphic">
+                                <div id="SettingSkipCharge" class="mdc-switch">
+                                    <div class="mdc-switch__track"></div>
+                                    <div class="mdc-switch__thumb-underlay">
+                                        <div class="mdc-switch__thumb">
+                                            <input type="checkbox" id="SettingSkipChargeInput"
+                                                class="mdc-switch__native-control">
+                                        </div>
+                                    </div>
+                                </div>
+                            </span>
+                            <label class="mdc-list-item__text" for="SettingSkipChargeInput">是否自动跳过充电界面</label>
+                        </li>
+                        <li class="mdc-list-item" role="switch">
+                            <span class="mdc-list-item__graphic">
+                                <div id="SettingAutoPlayChange" class="mdc-switch">
+                                    <div class="mdc-switch__track"></div>
+                                    <div class="mdc-switch__thumb-underlay">
+                                        <div class="mdc-switch__thumb">
+                                            <input type="checkbox" id="SettingAutoPlayChangeInput"
+                                                class="mdc-switch__native-control">
+                                        </div>
+                                    </div>
+                                </div>
+                            </span>
+                            <label class="mdc-list-item__text"
+                                for="SettingAutoPlayChangeInput">是否启用自动连播改变功能(注意以下四项设置仅在启用本设置后生效)</label>
+                        </li>
+                        <li class="mdc-list-item" role="switch">
+                            <span class="mdc-list-item__graphic">
+                                <div id="SettingSingleVideoAutoPlayRecommend" class="mdc-switch">
+                                    <div class="mdc-switch__track"></div>
+                                    <div class="mdc-switch__thumb-underlay">
+                                        <div class="mdc-switch__thumb">
+                                            <input type="checkbox" id="SettingSingleVideoAutoPlayRecommendInput"
+                                                class="mdc-switch__native-control">
+                                        </div>
+                                    </div>
+                                </div>
+                            </span>
+                            <label class="mdc-list-item__text"
+                                for="SettingSingleVideoAutoPlayRecommendInput">单个视频是否启用自动连播</label>
+                        </li>
+                        <li class="mdc-list-item" role="switch">
+                            <span class="mdc-list-item__graphic">
+                                <div id="SettingMultipartVideoAutoPlay" class="mdc-switch">
+                                    <div class="mdc-switch__track"></div>
+                                    <div class="mdc-switch__thumb-underlay">
+                                        <div class="mdc-switch__thumb">
+                                            <input type="checkbox" id="SettingMultipartVideoAutoPlayInput"
+                                                class="mdc-switch__native-control">
+                                        </div>
+                                    </div>
+                                </div>
+                            </span>
+                            <label class="mdc-list-item__text"
+                                for="SettingMultipartVideoAutoPlayInput">多P视频是否启用分P自动连播</label>
+                        </li>
+                        <li class="mdc-list-item" role="switch">
+                            <span class="mdc-list-item__graphic">
+                                <div id="SettingMultipartVideoAutoPlayRecommend" class="mdc-switch">
+                                    <div class="mdc-switch__track"></div>
+                                    <div class="mdc-switch__thumb-underlay">
+                                        <div class="mdc-switch__thumb">
+                                            <input type="checkbox" id="SettingMultipartVideoAutoPlayRecommendInput"
+                                                class="mdc-switch__native-control">
+                                        </div>
+                                    </div>
+                                </div>
+                            </span>
+                            <label class="mdc-list-item__text"
+                                for="SettingMultipartVideoAutoPlayRecommendInput">多P视频是否启用推荐自动连播</label>
+                        </li>
+                        <li class="mdc-list-item" role="switch">
+                            <span class="mdc-list-item__graphic">
+                                <div id="SettingBangumiAutoPlay" class="mdc-switch">
+                                    <div class="mdc-switch__track"></div>
+                                    <div class="mdc-switch__thumb-underlay">
+                                        <div class="mdc-switch__thumb">
+                                            <input type="checkbox" id="SettingBangumiAutoPlayInput"
+                                                class="mdc-switch__native-control">
+                                        </div>
+                                    </div>
+                                </div>
+                            </span>
+                            <label class="mdc-list-item__text" for="SettingBangumiAutoPlayInput">番剧是否启用自动切集</label>
+                        </li>
+                        <li>
+                            <label class="mdc-list-item__text" for="SettingSettingButtonOpacity">设置按钮不透明度<input
+                                    type="number" id="SettingSettingButtonOpacityManualInput" pattern="\d+" /></label>
 
-        </div>
-        <div class="mdc-dialog__actions">
-        <button id="SettingDialogCancelButton" type="button" class="mdc-button mdc-dialog__button">
-        <div class="mdc-button__ripple"></div>
-        <span class="mdc-button__label">取消</span>
-        </button>
-        <button id="SettingDialogConfirmButton" type="button" class="mdc-button mdc-dialog__button">
-        <div class="mdc-button__ripple"></div>
-        <span class="mdc-button__label">保存</span>
-        </button>
-        </div>
-        </div>
+                            <div class="mdc-slider" id="SettingSettingButtonOpacity">
+                                <input class="mdc-slider__input" type="range" id="SettingSettingButtonOpacityInput"
+                                    min="0" max="1000" value="100" name="buttonOpacity">
+                                <div class="mdc-slider__track">
+                                    <div class="mdc-slider__track--inactive"></div>
+                                    <div class="mdc-slider__track--active">
+                                        <div class="mdc-slider__track--active_fill"></div>
+                                    </div>
+                                </div>
+                                <div class="mdc-slider__thumb">
+                                    <div class="mdc-slider__thumb-knob"></div>
+                                </div>
+                            </div>
+                        </li>
+                        <li>
+                            <label class="mdc-list-item__text" for="SettingSettingButtonRightPosition">设置按钮右侧偏移<input
+                                    type="number" id="SettingSettingButtonRightPositionManualInput"
+                                    pattern="\d+" /></label>
+
+                            <div class="mdc-slider" id="SettingSettingButtonRightPosition">
+                                <input class="mdc-slider__input" type="range"
+                                    id="SettingSettingButtonRightPositionInput" min="0" max="1000" value="5"
+                                    name="buttonRightPosition">
+                                <div class="mdc-slider__track">
+                                    <div class="mdc-slider__track--inactive"></div>
+                                    <div class="mdc-slider__track--active">
+                                        <div class="mdc-slider__track--active_fill"></div>
+                                    </div>
+                                </div>
+                                <div class="mdc-slider__thumb">
+                                    <div class="mdc-slider__thumb-knob"></div>
+                                </div>
+                            </div>
+                        </li>
+                        <li>
+                            <label class="mdc-list-item__text" for="SettingSettingButtonTopPosition">设置按钮顶部偏移<input
+                                    type="number" id="SettingSettingButtonTopPositionManualInput"
+                                    pattern="\d+" /></label>
+
+                            <div class="mdc-slider" id="SettingSettingButtonTopPosition">
+                                <input class="mdc-slider__input" type="range" id="SettingSettingButtonTopPositionInput"
+                                    min="0" max="1000" value="300" name="buttonTopPosition">
+                                <div class="mdc-slider__track">
+                                    <div class="mdc-slider__track--inactive"></div>
+                                    <div class="mdc-slider__track--active">
+                                        <div class="mdc-slider__track--active_fill"></div>
+                                    </div>
+                                </div>
+                                <div class="mdc-slider__thumb">
+                                    <div class="mdc-slider__thumb-knob"></div>
+                                </div>
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+                <div class="mdc-dialog__actions">
+                    <button id="SettingDialogCancelButton" type="button" class="mdc-button mdc-dialog__button">
+                        <div class="mdc-button__ripple"></div>
+                        <span class="mdc-button__label">取消</span>
+                    </button>
+                    <button id="SettingDialogConfirmButton" type="button" class="mdc-button mdc-dialog__button">
+                        <div class="mdc-button__ripple"></div>
+                        <span class="mdc-button__label">保存</span>
+                    </button>
+                </div>
+            </div>
         </div>
         <div class="mdc-dialog__scrim"></div>
-        </div>`
+    </div>`
       );
       // setTimeout(() => {
       MDCDialog = mdc.dialog.MDCDialog.attachTo($("#AutoPlaySettingDialog")[0]);
@@ -913,7 +943,9 @@
 
     $("body").ready(() => {
       injectMDCSnackbar();
-      injectSettingButton();
+      if (currentSettings.showSettingButton) {
+        injectSettingButton();
+      }
     });
 
     $(document).on({
