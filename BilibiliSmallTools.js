@@ -423,8 +423,6 @@
   function injectSettingDialog(openAfterInject) {
     if (MDCDialog !== null) {
       console.log("设置MDCDialog已注入，无需再次注入");
-
-      return;
     } else {
       $("body").prepend(
         `<div id="AutoPlaySettingDialog" class="mdc-dialog" style="z-index: 1001">
@@ -774,6 +772,67 @@
       showMDCSnackbar("设置加载成功");
       console.log("设置MDCDialog注入完成");
       // }, 0);
+    }
+    if (openAfterInject) {
+      MDCDialog.open();
+    }
+  }
+
+  function injectBlackReasonDialog(openAfterInject) {
+    if (MDCDialog !== null) {
+      console.log("拉黑原因MDCDialog已注入，无需再次注入");
+    } else {
+      $("body").prepend(
+        `<div id="blackReasonDialog" class="mdc-dialog" style="z-index:20001" aria-modal="true">
+        <div class="mdc-dialog__container" style="width: 100%">
+          <div class="mdc-dialog__surface" style="width: 100%" role="alertdialog" aria-modal="true" aria-labelledby="blackReasonDialogTitle" aria-describedby="my-dialog-content">
+            <h2 class="mdc-dialog__title" id="blackReasonDialogTitle">拉黑原因</h2>
+            <div class="mdc-dialog__content" style="padding-top: 10px">
+              <label class="mdc-text-field mdc-text-field--outlined"  style="width: 100%">
+                <span class="mdc-notched-outline">
+                  <span class="mdc-notched-outline__leading"></span>
+                  <span class="mdc-notched-outline__notch">
+                    <span class="mdc-floating-label" id="blockFromUrlLabel">Url</span>
+                  </span>
+                  <span class="mdc-notched-outline__trailing"></span>
+                </span>
+                <input id="blackUrlInput" type="text" class="mdc-text-field__input" aria-labelledby="blockFromUrlLabel">
+              </label>
+              </br>
+              </br>
+              <label class="mdc-text-field mdc-text-field--outlined mdc-text-field--textarea" style="width: 100%">
+                <span class="mdc-notched-outline">
+                  <span class="mdc-notched-outline__leading"></span>
+                  <span class="mdc-notched-outline__notch">
+                    <span class="mdc-floating-label" id="blockReason">原因</span>
+                  </span>
+                  <span class="mdc-notched-outline__trailing"></span>
+                </span>
+                <span class= "mdc-text-field__resizer">
+                  <textarea id="blackReasonTextArea" class="mdc-text-field__input" rows="8" aria-labelledby="blockReason"></textarea> 
+                </span>
+              </label>
+            </div>
+            <div id="blackReasonDialogActions" class="mdc-dialog__actions"></div>
+          </div>
+        </div>
+        <div class="mdc-dialog__scrim"></div>
+      </div>`
+      );
+      //JQuery prepend不太稳定，等待JQuery注入完成
+      // setTimeout(() => {
+      $(".mdc-text-field").each((index, element) => {
+        mdc.textField.MDCTextField.attachTo($(element)[0]);
+      });
+      $(".mdc-button").each((index, element) => {
+        mdc.ripple.MDCRipple.attachTo($(element)[0]);
+      });
+      MDCDialog = mdc.dialog.MDCDialog.attachTo($(".mdc-dialog")[0]);
+      // console.log(dialog.scrimClickAction);
+      MDCDialog.scrimClickAction = "";
+      MDCDialog.escapeKeyAction = "";
+      // }, 0);
+      console.log("拉黑原因MDCDialog注入完成");
     }
     if (openAfterInject) {
       MDCDialog.open();
@@ -1292,56 +1351,7 @@
     }
     $("body").ready(() => {
       injectMDCSnackbar();
-      $("body").prepend(
-        `<div id="blackReasonDialog" class="mdc-dialog" style="z-index:20001" aria-modal="true">
-          <div class="mdc-dialog__container" style="width: 100%">
-          <div class="mdc-dialog__surface" style="width: 100%" role="alertdialog" aria-modal="true" aria-labelledby="blackReasonDialogTitle" aria-describedby="my-dialog-content">
-          <h2 class="mdc-dialog__title" id="blackReasonDialogTitle">拉黑原因</h2>
-          <div class="mdc-dialog__content" style="padding-top: 10px">
-          <label class="mdc-text-field mdc-text-field--outlined"  style="width: 100%">
-          <span class="mdc-notched-outline">
-          <span class="mdc-notched-outline__leading"></span>
-          <span class="mdc-notched-outline__notch">
-          <span class="mdc-floating-label" id="blockFromUrlLabel">Url</span>
-          </span>
-          <span class="mdc-notched-outline__trailing"></span>
-          </span>
-          <input id="blackUrlInput" type="text" class="mdc-text-field__input" aria-labelledby="blockFromUrlLabel">
-          </label>
-          </br>
-          </br>
-          <label class="mdc-text-field mdc-text-field--outlined mdc-text-field--textarea" style="width: 100%">
-          <span class="mdc-notched-outline">
-          <span class="mdc-notched-outline__leading"></span>
-          <span class="mdc-notched-outline__notch">
-          <span class="mdc-floating-label" id="blockReason">原因</span>
-          </span>
-          <span class="mdc-notched-outline__trailing"></span>
-          </span>
-          <span class= "mdc-text-field__resizer">
-          <textarea id="blackReasonTextArea" class="mdc-text-field__input" rows="8" aria-labelledby="blockReason"></textarea> 
-          </span>
-          </label>
-          </div>
-          <div id="blackReasonDialogActions" class="mdc-dialog__actions">
-          </div>
-          </div>
-          </div>
-          <div class="mdc-dialog__scrim"></div></div>`
-      );
-      //JQuery prepend不太稳定，等待JQuery注入完成
-      // setTimeout(() => {
-        $(".mdc-text-field").each((index, element) => {
-          mdc.textField.MDCTextField.attachTo($(element)[0]);
-        });
-        $(".mdc-button").each((index, element) => {
-          mdc.ripple.MDCRipple.attachTo($(element)[0]);
-        });
-        MDCDialog = mdc.dialog.MDCDialog.attachTo($(".mdc-dialog")[0]);
-        // console.log(dialog.scrimClickAction);
-        MDCDialog.scrimClickAction = "";
-        MDCDialog.escapeKeyAction = "";
-      // }, 0);
+      injectBlackReasonDialog(false);
     });
 
     function changeDialogAndBlackReasonButton(userInBlackList) {
