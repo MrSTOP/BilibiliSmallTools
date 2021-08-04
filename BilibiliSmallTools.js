@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name               哔哩哔哩 小功能
 // @namespace          https://github.com/MrSTOP
-// @version            0.4.7.7
+// @version            0.5.0.0
 // @description        记录为什么屏蔽了此人，支持导入导出。添加自动跳过充电页面功能，调整B站恶心的自动连播功能
 // @author             MrSTOP
 // @license            GPLv3
@@ -10,6 +10,7 @@
 // @match              https://www.bilibili.com/bangumi/*
 // @match              https://www.bilibili.com/video/*
 // @match              https://space.bilibili.com/*
+// @match              https://www.bilibili.com/medialist/play/watchlater/*
 // @grant              GM_getValue
 // @grant              GM_setValue
 // @grant              GM_addValueChangeListener
@@ -17,10 +18,9 @@
 // @grant              GM_addStyle
 // @grant              GM_getResourceText
 // @grant              GM_registerMenuCommand
-// @require            https://greasyfork.org/scripts/31539-singletondata/code/SingletonData.js
 // @require            https://cdn.jsdelivr.net/npm/jquery/dist/jquery.min.js
-// @require            https://unpkg.com/material-components-web@latest/dist/material-components-web.min.js
-// @resource           material-component-web    https://unpkg.com/material-components-web@latest/dist/material-components-web.min.css
+// @require            https://unpkg.com/material-components-web@11.0.0/dist/material-components-web.min.js
+// @resource           material-component-web    https://unpkg.com/material-components-web@11.0.0/dist/material-components-web.min.css
 // @noframes
 // ==/UserScript==
 
@@ -86,6 +86,62 @@
   require("greasemonkey");
 })();
 
+
+let SingletonData = (() => {
+  let names = new Set();
+  class SingletonData {
+    constructor(key, defaultValue = null) {
+      if (typeof key !== "string") throw "key must be string";
+      if (!key) throw "key cannot be empty";
+      if (names.has(key)) throw `SingletonData <${key}> is created.`;
+      names.add(key);
+
+      const unset = {};
+      let data = unset;
+      let isDisposed = false;
+
+      function ensureSafe() {
+        if (isDisposed) throw "object is disposed.";
+      }
+
+      Object.defineProperty(this, "data", {
+        get: () => {
+          ensureSafe();
+          if (data === unset) {
+            data = GM_getValue(key, defaultValue);
+          }
+          return data;
+        },
+        set: (value) => {
+          ensureSafe();
+          data = value;
+          GM_setValue(key, value);
+        },
+      });
+
+      this.save = () => {
+        ensureSafe();
+        GM_setValue(key, data);
+      };
+
+      const listenerId = GM_addValueChangeListener(
+        key,
+        (_, oldValue, newValue, remote) => {
+          if (!remote) return;
+          data = newValue;
+        }
+      );
+      this.dispose = () => {
+        isDisposed = true;
+        GM_removeValueChangeListener(listenerId);
+        names.delete(key);
+      };
+    }
+  }
+
+  return SingletonData;
+})();
+
 (function () {
   "use strict";
 
@@ -98,6 +154,7 @@
     singleVideoAutoPlayRecommend: false,
     multipartVideoAutoPlay: true,
     multipartVideoAutoPlayRecommend: false,
+    watchLaterAutoPlay: true,
     bangumiAutoPlay: true,
     settingButtonOpacity: 100,
     settingButtonRightPosition: 0,
@@ -333,6 +390,9 @@
   let currentSettings = settingsStorage.loadSettings();
   /********************************************************************************/
   //防止升级后出现undefined值
+  if (currentSettings.watchLaterAutoPlay === undefined) {
+    currentSettings.watchLaterAutoPlay = DEFAULT_SETTING.watchLaterAutoPlay;
+  }
   if (currentSettings.bangumiAutoPlay === undefined) {
     currentSettings.bangumiAutoPlay = DEFAULT_SETTING.bangumiAutoPlay;
   }
@@ -365,6 +425,9 @@
   );
   let blackListRegEx = /https\:\/\/account\.bilibili\.com\/account\/blacklist/;
   let spaceRegEx = /https:\/\/space\.bilibili\.com\/[0-9]+/;
+  let watchLaterRegEx =
+    /https\:\/\/www\.bilibili\.com\/medialist\/play\/watchlater\/.+/;
+  let bangumiRegEx = /https\:\/\/www\.bilibili\.com\/bangumi\/.+/;
   let midFromSpaceUrlRegEx = /[0-9]+/;
 
   function injectMDCSnackbar() {
@@ -516,6 +579,21 @@
                         </li>
                         <li class="mdc-list-item" role="switch">
                             <span class="mdc-list-item__graphic">
+                                <div id="SettingWatchLaterAutoPlay" class="mdc-switch">
+                                    <div class="mdc-switch__track"></div>
+                                    <div class="mdc-switch__thumb-underlay">
+                                        <div class="mdc-switch__thumb">
+                                            <input type="checkbox" id="SettingWatchLaterAutoPlayInput"
+                                                class="mdc-switch__native-control">
+                                        </div>
+                                    </div>
+                                </div>
+                            </span>
+                            <label class="mdc-list-item__text"
+                                for="SettingWatchLaterAutoPlayInput">稍后再看是否启用自动连播</label>
+                        </li>
+                        <li class="mdc-list-item" role="switch">
+                            <span class="mdc-list-item__graphic">
                                 <div id="SettingBangumiAutoPlay" class="mdc-switch">
                                     <div class="mdc-switch__track"></div>
                                     <div class="mdc-switch__thumb-underlay">
@@ -631,6 +709,7 @@
         "#SettingMultipartVideoAutoPlayRecommend"
       );
       let jQ_BangumiAutoPlaySwitch = $("#SettingBangumiAutoPlay");
+      let jQ_WatchLaterAutoPlaySwitch = $("#SettingWatchLaterAutoPlay");
       let jQ_SettingButtonOpacitySlider = $("#SettingSettingButtonOpacity");
       let jQ_SettingButtonOpacityManualInput = $(
         "#SettingSettingButtonOpacityManualInput"
@@ -668,6 +747,9 @@
         );
       let bangumiAutoPlaySwitch = mdc.switchControl.MDCSwitch.attachTo(
         jQ_BangumiAutoPlaySwitch[0]
+      );
+      let watchLaterAutoPlaySwitch = mdc.switchControl.MDCSwitch.attachTo(
+        jQ_WatchLaterAutoPlaySwitch[0]
       );
       let settingButtonOpacitySlider = mdc.slider.MDCSlider.attachTo(
         jQ_SettingButtonOpacitySlider[0]
@@ -755,6 +837,8 @@
             settingList.setEnabled([4], true);
             multipartVideoAutoPlayRecommendSwitch.disabled = false;
             settingList.setEnabled([5], true);
+            watchLaterAutoPlaySwitch.disabled = false;
+            settingList.setEnabled([6], true);
             bangumiAutoPlaySwitch.disabled = false;
           } else {
             settingList.setEnabled([2], false);
@@ -764,6 +848,8 @@
             settingList.setEnabled([4], false);
             multipartVideoAutoPlayRecommendSwitch.disabled = true;
             settingList.setEnabled([5], false);
+            watchLaterAutoPlaySwitch.disabled = true;
+            settingList.setEnabled([6], false);
             bangumiAutoPlaySwitch.disabled = true;
           }
         },
@@ -777,6 +863,7 @@
         currentSettings.multipartVideoAutoPlay;
       multipartVideoAutoPlayRecommendSwitch.checked =
         currentSettings.multipartVideoAutoPlayRecommend;
+      watchLaterAutoPlaySwitch.checked = currentSettings.watchLaterAutoPlay
       bangumiAutoPlaySwitch.checked = currentSettings.bangumiAutoPlay;
       let settingButtonOpacity = currentSettings.settingButtonOpacity;
       settingButtonOpacitySlider.setValue(settingButtonOpacity);
@@ -805,6 +892,7 @@
             multipartVideoAutoPlaySwitch.checked;
           currentSettings.multipartVideoAutoPlayRecommend =
             multipartVideoAutoPlayRecommendSwitch.checked;
+          currentSettings.watchLaterAutoPlay = watchLaterAutoPlaySwitch.checked;
           currentSettings.bangumiAutoPlay = bangumiAutoPlaySwitch.checked;
           currentSettings.settingButtonOpacity =
             settingButtonOpacitySlider.getValue();
@@ -913,22 +1001,25 @@
             $(node).hasClass("bilibili-player-video-btn-setting") &&
             currentSettings.autoPlayChange
           ) {
-            $("body .bilibili-player-video-btn-setting")[0].dispatchEvent(
-              new Event("mouseover")
-            );
-            $("body .bilibili-player-video-btn-setting")[0].dispatchEvent(
-              new Event("mouseout")
-            );
-            if (currentSettings.bangumiAutoPlay) {
-              $(
-                "body .bilibili-player-video-btn-setting-right-playtype-content>div>div>label:nth-of-type(1)"
-              )[0].click();
-              console.log("已开启自动切集");
-            } else {
-              $(
-                "body .bilibili-player-video-btn-setting-right-playtype-content>div>div>label:nth-of-type(2)"
-              )[0].click();
-              console.log("已开启播完暂停");
+            if (bangumiRegEx.test(window.location.href)) {
+              console.log("处于番剧页面");
+              $("body .bilibili-player-video-btn-setting")[0].dispatchEvent(
+                new Event("mouseover")
+              );
+              $("body .bilibili-player-video-btn-setting")[0].dispatchEvent(
+                new Event("mouseout")
+              );
+              if (currentSettings.bangumiAutoPlay) {
+                $(
+                  "body .bilibili-player-video-btn-setting-right-playtype-content>div>div>label:nth-of-type(1)"
+                )[0].click();
+                console.log("已开启自动切集");
+              } else {
+                $(
+                  "body .bilibili-player-video-btn-setting-right-playtype-content>div>div>label:nth-of-type(2)"
+                )[0].click();
+                console.log("已开启播完暂停");
+              }
             }
           }
           if ($(node).hasClass("list-item")) {
@@ -968,66 +1059,108 @@
       injectMDCSnackbar();
       if (currentSettings.showSettingButton) {
         injectSettingButton();
+      } else {
+        console.log("无需注入设置按钮");
       }
-      console.log("无需注入设置按钮");
     });
 
     $(document).on({
       playerPageListXHRResponse: (event, playlistObj) => {
         if (!currentSettings.autoPlayChange) {
+          console.log("无需改变自动播放状态");
           return;
         }
-        VIDEO_PAGE_PLAY_LIST_OBJ = playlistObj;
-        if (playlistObj.data.length === 1) {
-          let autoPlayButton = $("#reco_list").find(
-            ".next-play .next-button .switch-button"
+        if (watchLaterRegEx.test(window.location.href)) {
+          console.log("处于稍后再看页面");
+          let watchLaterListObserver = new MutationObserver(
+            (mutationRecords, instance) => {
+              mutationRecords.forEach((mutationRecord) => {
+                //没有添加节点
+                if (mutationRecord.addedNodes.length === 0) {
+                  return;
+                }
+                mutationRecord.addedNodes.forEach((node) => {
+                  if ($(node).hasClass("player-auxiliary-area")) {
+                    let autoPlayButton = $(node).find(
+                      ".player-auxiliary-autoplay-switch>.bui-switch-input"
+                    );
+                    if (!autoPlayButton.prop("checked")) {
+                      console.log("自动连播处于关闭状态");
+                      if (currentSettings.watchLaterAutoPlay) {
+                        autoPlayButton.click();
+                        console.log("已开启自动连播");
+                      }
+                    } else {
+                      console.log("自动连播处于开启状态");
+                      if (!currentSettings.watchLaterAutoPlay) {
+                        autoPlayButton.click();
+                        console.log("已关闭自动连播");
+                      }
+                    }
+                    watchLaterListObserver.disconnect();
+                  }
+                });
+              });
+            }
           );
-          // console.log(playNextList);
-          // console.log(autoPlayButton);
-          console.log("检测到无分P视频");
-          if (autoPlayButton.hasClass("on")) {
-            console.log("推荐自动连播处于开启状态");
-            if (!currentSettings.singleVideoAutoPlayRecommend) {
-              autoPlayButton.click();
-              console.log("已关闭推荐自动连播");
-            }
-          } else {
-            console.log("推荐自动连播处于关闭状态");
-            if (currentSettings.singleVideoAutoPlayRecommend) {
-              autoPlayButton.click();
-              console.log("已开启推荐自动连播");
-            }
-          }
+          watchLaterListObserver.observe(document, {
+            childList: true,
+            subtree: true,
+          });
         } else {
-          let autoPlayButton = $("#multi_page").find(
-            ".next-button .switch-button"
-          );
-          // console.log(playNextList);
-          // console.log(autoPlayButton);
-          // console.log(
-          //   autoPlayButton.getElementsByClassName("switch-button")[0]
-          // );
-          // console.log(
-          //   autoPlayButton.getElementsByClassName("switch-button on")[0]
-          // );
-          console.log("检测到有分P视频");
-          if (!autoPlayButton.hasClass("on")) {
-            console.log("自动连播处于关闭状态");
-            if (currentSettings.multipartVideoAutoPlay) {
-              autoPlayButton.click();
-              console.log("已开启自动连播");
+          VIDEO_PAGE_PLAY_LIST_OBJ = playlistObj;
+          if (playlistObj.data.length === 1) {
+            let autoPlayButton = $("#reco_list").find(
+              ".next-play .next-button .switch-button"
+            );
+            // console.log(playNextList);
+            // console.log(autoPlayButton);
+            console.log("检测到无分P视频");
+            if (autoPlayButton.hasClass("on")) {
+              console.log("推荐自动连播处于开启状态");
+              if (!currentSettings.singleVideoAutoPlayRecommend) {
+                autoPlayButton.click();
+                console.log("已关闭推荐自动连播");
+              }
+            } else {
+              console.log("推荐自动连播处于关闭状态");
+              if (currentSettings.singleVideoAutoPlayRecommend) {
+                autoPlayButton.click();
+                console.log("已开启推荐自动连播");
+              }
             }
           } else {
-            console.log("自动连播处于开启状态");
-            if (!currentSettings.multipartVideoAutoPlay) {
-              autoPlayButton.click();
-              console.log("已关闭自动连播");
+            let autoPlayButton = $("#multi_page").find(
+              ".next-button .switch-button"
+            );
+            // console.log(playNextList);
+            // console.log(autoPlayButton);
+            // console.log(
+            //   autoPlayButton.getElementsByClassName("switch-button")[0]
+            // );
+            // console.log(
+            //   autoPlayButton.getElementsByClassName("switch-button on")[0]
+            // );
+            console.log("检测到有分P视频");
+            if (!autoPlayButton.hasClass("on")) {
+              console.log("自动连播处于关闭状态");
+              if (currentSettings.multipartVideoAutoPlay) {
+                autoPlayButton.click();
+                console.log("已开启自动连播");
+              }
+            } else {
+              console.log("自动连播处于开启状态");
+              if (!currentSettings.multipartVideoAutoPlay) {
+                autoPlayButton.click();
+                console.log("已关闭自动连播");
+              }
             }
           }
         }
       },
       playerV2XHRResponse: (event, v2Obj) => {
         if (!currentSettings.autoPlayChange) {
+          console.log("无需改变自动播放状态");
           return;
         }
         if ($("#multi_page").length === 0) {

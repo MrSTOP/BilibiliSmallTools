@@ -4,6 +4,8 @@
 
 **0.4.6.2可能引入了破坏性更改，为避免问题，有关自动播放的设置已被重置，请重新设置（不影响已保存的拉黑原因）**
 
+**0.5.0.0添加对稍后再看页面支持([SingletonData.js](https://greasyfork.org/scripts/31539-singletondata/code/SingletonData.js)依赖已被[作者](https://github.com/cologler/)删除，从过去保存的文件中恢复，可能会引发问题)**
+
 如果启用了番剧自动切集功能，视频或番剧播放页面中播放器的设置窗口可能会短暂弹出一下（视频播放器的设置是动态加载的，为实现自动设置功能必须这样操作 PS:通常应该不会出现）
 
 ![播放器设置窗口示意图](./VideoSetting.jpg)
