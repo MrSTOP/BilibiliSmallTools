@@ -86,7 +86,6 @@
   require("greasemonkey");
 })();
 
-
 let SingletonData = (() => {
   let names = new Set();
   class SingletonData {
@@ -863,7 +862,7 @@ let SingletonData = (() => {
         currentSettings.multipartVideoAutoPlay;
       multipartVideoAutoPlayRecommendSwitch.checked =
         currentSettings.multipartVideoAutoPlayRecommend;
-      watchLaterAutoPlaySwitch.checked = currentSettings.watchLaterAutoPlay
+      watchLaterAutoPlaySwitch.checked = currentSettings.watchLaterAutoPlay;
       bangumiAutoPlaySwitch.checked = currentSettings.bangumiAutoPlay;
       let settingButtonOpacity = currentSettings.settingButtonOpacity;
       settingButtonOpacitySlider.setValue(settingButtonOpacity);
@@ -1022,8 +1021,13 @@ let SingletonData = (() => {
               }
             }
           }
-          if ($(node).hasClass("list-item")) {
-            $(node).find("li.blacklist").on({
+          if ($(node).hasClass("list-item") || $(node).hasClass("reply-item")) {
+            // console.log($(node));
+            let blackButtons = $(node).find(
+              "div.con>div.info>div.operation>div.opera-list>ul>li.blacklist,div.info>div.operation>div.opera-list>ul>li.blacklist"
+            );
+            // console.log(blackButton);
+            blackButtons.on({
               click: blackButtonClickHandler,
             });
           }
