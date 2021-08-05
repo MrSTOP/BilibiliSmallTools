@@ -12,6 +12,8 @@
 
 ![拉黑提示信息](./VideoBlockInfo.jpg)
 
+**0.5.2.0 修复视频评论区加载更多评论时，对新加载的评论进行拉黑操作无效的问题**
+
 **0.5.1.0 [Material Component Web](https://github.com/material-components/material-components-web)引入破坏性更改，导致开关组件失效，降级至V11.0.0版本**
 
 **0.5.0.0添加对稍后再看页面支持([SingletonData.js](https://greasyfork.org/scripts/31539-singletondata/code/SingletonData.js)依赖已被[作者](https://github.com/cologler/)删除，从过去保存的文件中恢复，可能会引发问题)**
