@@ -32,47 +32,21 @@
       if (this.readyState === 4) {
         // console.log(this.responseURL);
         // console.log(this.responseText);
-        if (
-          this.responseURL.includes(
-            "https://api.bilibili.com/x/relation/blacks"
-          )
-        ) {
+        if (this.responseURL.includes("https://api.bilibili.com/x/relation/blacks")) {
           // 延迟一下避免黑名单列表没加载好
           setTimeout(() => {
-            $(document).trigger("relationBlacksXHRResponse", [
-              JSON.parse(this.responseText),
-            ]);
+            $(document).trigger("relationBlacksXHRResponse", [JSON.parse(this.responseText)]);
           }, 500);
-        } else if (
-          this.responseURL.includes(
-            "https://api.bilibili.com/x/relation/modify"
-          )
-        ) {
+        } else if (this.responseURL.includes("https://api.bilibili.com/x/relation/modify")) {
           // setTimeout(() => {
-          $(document).trigger("relationModifyXHRResponse", [
-            JSON.parse(this.responseText),
-          ]);
+          $(document).trigger("relationModifyXHRResponse", [JSON.parse(this.responseText)]);
           // }, 500);
-        } else if (
-          this.responseURL.includes(
-            "https://api.bilibili.com/x/player/pagelist"
-          )
-        ) {
-          $(document).trigger("playerPageListXHRResponse", [
-            JSON.parse(this.responseText),
-          ]);
-        } else if (
-          this.responseURL.includes("https://api.bilibili.com/x/player/v2")
-        ) {
-          $(document).trigger("playerV2XHRResponse", [
-            JSON.parse(this.responseText),
-          ]);
-        } else if (
-          this.responseURL.includes("https://api.bilibili.com/x/space/acc/info")
-        ) {
-          $(document).trigger("spaceAccInfoXHRResponse", [
-            JSON.parse(this.responseText),
-          ]);
+        } else if (this.responseURL.includes("https://api.bilibili.com/x/player/pagelist")) {
+          $(document).trigger("playerPageListXHRResponse", [JSON.parse(this.responseText)]);
+        } else if (this.responseURL.includes("https://api.bilibili.com/x/player/v2")) {
+          $(document).trigger("playerV2XHRResponse", [JSON.parse(this.responseText)]);
+        } else if (this.responseURL.includes("https://api.bilibili.com/x/space/acc/info")) {
+          $(document).trigger("spaceAccInfoXHRResponse", [JSON.parse(this.responseText)]);
         }
       }
     });
@@ -123,13 +97,10 @@ let SingletonData = (() => {
         GM_setValue(key, data);
       };
 
-      const listenerId = GM_addValueChangeListener(
-        key,
-        (_, oldValue, newValue, remote) => {
-          if (!remote) return;
-          data = newValue;
-        }
-      );
+      const listenerId = GM_addValueChangeListener(key, (_, oldValue, newValue, remote) => {
+        if (!remote) return;
+        data = newValue;
+      });
       this.dispose = () => {
         isDisposed = true;
         GM_removeValueChangeListener(listenerId);
@@ -355,10 +326,9 @@ let SingletonData = (() => {
 
         if (added + errors + exists > 0) {
           showMDCSnackbar(
-            [
-              `共导入 ${added + errors + exists} 项,`,
-              `新增 ${added}项, 存在 ${exists}项, 错误 ${errors}项.`,
-            ].join("<br>")
+            [`共导入 ${added + errors + exists} 项,`, `新增 ${added}项, 存在 ${exists}项, 错误 ${errors}项.`].join(
+              "<br>"
+            )
           );
           return;
         }
@@ -368,10 +338,7 @@ let SingletonData = (() => {
   }
   class SettingsStorage {
     constructor() {
-      this._singletonData = new SingletonData(
-        "bilibili-small-tools-settings",
-        DEFAULT_SETTING
-      );
+      this._singletonData = new SingletonData("bilibili-small-tools-settings", DEFAULT_SETTING);
     }
 
     saveSettings(newSettings) {
@@ -399,12 +366,10 @@ let SingletonData = (() => {
     currentSettings.settingButtonOpacity = DEFAULT_SETTING.settingButtonOpacity;
   }
   if (currentSettings.settingButtonRightPosition === undefined) {
-    currentSettings.settingButtonRightPosition =
-      DEFAULT_SETTING.settingButtonRightPosition;
+    currentSettings.settingButtonRightPosition = DEFAULT_SETTING.settingButtonRightPosition;
   }
   if (currentSettings.settingButtonTopPosition === undefined) {
-    currentSettings.settingButtonTopPosition =
-      DEFAULT_SETTING.settingButtonTopPosition;
+    currentSettings.settingButtonTopPosition = DEFAULT_SETTING.settingButtonTopPosition;
   }
   if (currentSettings.showSettingButton === undefined) {
     currentSettings.showSettingButton = DEFAULT_SETTING.showSettingButton;
@@ -424,8 +389,7 @@ let SingletonData = (() => {
   );
   let blackListRegEx = /https\:\/\/account\.bilibili\.com\/account\/blacklist/;
   let spaceRegEx = /https:\/\/space\.bilibili\.com\/[0-9]+/;
-  let watchLaterRegEx =
-    /https\:\/\/www\.bilibili\.com\/medialist\/play\/watchlater\/.+/;
+  let watchLaterRegEx = /https\:\/\/www\.bilibili\.com\/medialist\/play\/watchlater\/.+/;
   let bangumiRegEx = /https\:\/\/www\.bilibili\.com\/bangumi\/.+/;
   let midFromSpaceUrlRegEx = /[0-9]+/;
 
@@ -468,9 +432,7 @@ let SingletonData = (() => {
         </div>`
     );
     setTimeout(() => {
-      let tooltip = mdc.tooltip.MDCTooltip.attachTo(
-        $("#AutoPlaySettingButtonTooltip")[0]
-      );
+      let tooltip = mdc.tooltip.MDCTooltip.attachTo($("#AutoPlaySettingButtonTooltip")[0]);
       $("#OpenSettingDialogButton").on({
         click: () => {
           injectSettingDialog(true);
@@ -694,74 +656,38 @@ let SingletonData = (() => {
       );
       // setTimeout(() => {
       MDCDialog = mdc.dialog.MDCDialog.attachTo($("#AutoPlaySettingDialog")[0]);
-      let settingList = mdc.list.MDCList.attachTo(
-        $("#AutoPlaySettingOptionList")[0]
-      );
+      let settingList = mdc.list.MDCList.attachTo($("#AutoPlaySettingOptionList")[0]);
 
       let jQ_SkipChargeSwitch = $("#SettingSkipCharge");
       let jQ_AutoPlayChangeSwitch = $("#SettingAutoPlayChange");
-      let jQ_SingleVideoAutoPlayRecommendSwitch = $(
-        "#SettingSingleVideoAutoPlayRecommend"
-      );
+      let jQ_SingleVideoAutoPlayRecommendSwitch = $("#SettingSingleVideoAutoPlayRecommend");
       let jQ_MultipartVideoAutoPlaySwitch = $("#SettingMultipartVideoAutoPlay");
-      let jQ_MultipartVideoAutoPlayRecommendSwitch = $(
-        "#SettingMultipartVideoAutoPlayRecommend"
-      );
+      let jQ_MultipartVideoAutoPlayRecommendSwitch = $("#SettingMultipartVideoAutoPlayRecommend");
       let jQ_BangumiAutoPlaySwitch = $("#SettingBangumiAutoPlay");
       let jQ_WatchLaterAutoPlaySwitch = $("#SettingWatchLaterAutoPlay");
       let jQ_SettingButtonOpacitySlider = $("#SettingSettingButtonOpacity");
-      let jQ_SettingButtonOpacityManualInput = $(
-        "#SettingSettingButtonOpacityManualInput"
-      );
-      let jQ_SettingButtonRightPositionSlider = $(
-        "#SettingSettingButtonRightPosition"
-      );
-      let jQ_SettingButtonRightPositionManualInput = $(
-        "#SettingSettingButtonRightPositionManualInput"
-      );
-      let jQ_SettingButtonTopPositionSlider = $(
-        "#SettingSettingButtonTopPosition"
-      );
-      let jQ_SettingButtonTopPositionManualInput = $(
-        "#SettingSettingButtonTopPositionManualInput"
-      );
+      let jQ_SettingButtonOpacityManualInput = $("#SettingSettingButtonOpacityManualInput");
+      let jQ_SettingButtonRightPositionSlider = $("#SettingSettingButtonRightPosition");
+      let jQ_SettingButtonRightPositionManualInput = $("#SettingSettingButtonRightPositionManualInput");
+      let jQ_SettingButtonTopPositionSlider = $("#SettingSettingButtonTopPosition");
+      let jQ_SettingButtonTopPositionManualInput = $("#SettingSettingButtonTopPositionManualInput");
       let jQ_ShowSettingButtonSwitch = $("#SettingShowSettingButton");
 
-      let skipChargeSwitch = mdc.switchControl.MDCSwitch.attachTo(
-        jQ_SkipChargeSwitch[0]
+      let skipChargeSwitch = mdc.switchControl.MDCSwitch.attachTo(jQ_SkipChargeSwitch[0]);
+      let autoPlayChangeSwitch = mdc.switchControl.MDCSwitch.attachTo(jQ_AutoPlayChangeSwitch[0]);
+      let singleVideoAutoPlayRecommendSwitch = mdc.switchControl.MDCSwitch.attachTo(
+        jQ_SingleVideoAutoPlayRecommendSwitch[0]
       );
-      let autoPlayChangeSwitch = mdc.switchControl.MDCSwitch.attachTo(
-        jQ_AutoPlayChangeSwitch[0]
+      let multipartVideoAutoPlaySwitch = mdc.switchControl.MDCSwitch.attachTo(jQ_MultipartVideoAutoPlaySwitch[0]);
+      let multipartVideoAutoPlayRecommendSwitch = mdc.switchControl.MDCSwitch.attachTo(
+        jQ_MultipartVideoAutoPlayRecommendSwitch[0]
       );
-      let singleVideoAutoPlayRecommendSwitch =
-        mdc.switchControl.MDCSwitch.attachTo(
-          jQ_SingleVideoAutoPlayRecommendSwitch[0]
-        );
-      let multipartVideoAutoPlaySwitch = mdc.switchControl.MDCSwitch.attachTo(
-        jQ_MultipartVideoAutoPlaySwitch[0]
-      );
-      let multipartVideoAutoPlayRecommendSwitch =
-        mdc.switchControl.MDCSwitch.attachTo(
-          jQ_MultipartVideoAutoPlayRecommendSwitch[0]
-        );
-      let bangumiAutoPlaySwitch = mdc.switchControl.MDCSwitch.attachTo(
-        jQ_BangumiAutoPlaySwitch[0]
-      );
-      let watchLaterAutoPlaySwitch = mdc.switchControl.MDCSwitch.attachTo(
-        jQ_WatchLaterAutoPlaySwitch[0]
-      );
-      let settingButtonOpacitySlider = mdc.slider.MDCSlider.attachTo(
-        jQ_SettingButtonOpacitySlider[0]
-      );
-      let settingButtonRightPositionSlider = mdc.slider.MDCSlider.attachTo(
-        jQ_SettingButtonRightPositionSlider[0]
-      );
-      let settingButtonTopPositionSlider = mdc.slider.MDCSlider.attachTo(
-        jQ_SettingButtonTopPositionSlider[0]
-      );
-      let showSettingButtonSwitch = mdc.switchControl.MDCSwitch.attachTo(
-        jQ_ShowSettingButtonSwitch[0]
-      );
+      let bangumiAutoPlaySwitch = mdc.switchControl.MDCSwitch.attachTo(jQ_BangumiAutoPlaySwitch[0]);
+      let watchLaterAutoPlaySwitch = mdc.switchControl.MDCSwitch.attachTo(jQ_WatchLaterAutoPlaySwitch[0]);
+      let settingButtonOpacitySlider = mdc.slider.MDCSlider.attachTo(jQ_SettingButtonOpacitySlider[0]);
+      let settingButtonRightPositionSlider = mdc.slider.MDCSlider.attachTo(jQ_SettingButtonRightPositionSlider[0]);
+      let settingButtonTopPositionSlider = mdc.slider.MDCSlider.attachTo(jQ_SettingButtonTopPositionSlider[0]);
+      let showSettingButtonSwitch = mdc.switchControl.MDCSwitch.attachTo(jQ_ShowSettingButtonSwitch[0]);
 
       MDCDialog.listen("MDCDialog:opened", () => {
         settingButtonOpacitySlider.layout();
@@ -785,32 +711,21 @@ let SingletonData = (() => {
       });
       settingButtonRightPositionSlider.listen("MDCSlider:input", (event) => {
         jQ_SettingButtonRightPositionManualInput.val(event.detail.value);
-        $("#OpenSettingDialogButtonWrapper").css(
-          "right",
-          event.detail.value / 10 + "%"
-        );
+        $("#OpenSettingDialogButtonWrapper").css("right", event.detail.value / 10 + "%");
       });
       jQ_SettingButtonRightPositionManualInput.on({
         input: () => {
-          let rightPositionValue =
-            jQ_SettingButtonRightPositionManualInput.val();
+          let rightPositionValue = jQ_SettingButtonRightPositionManualInput.val();
           rightPositionValue = rightPositionValue < 0 ? 0 : rightPositionValue;
-          rightPositionValue =
-            rightPositionValue > 1000 ? 1000 : rightPositionValue;
+          rightPositionValue = rightPositionValue > 1000 ? 1000 : rightPositionValue;
           jQ_SettingButtonRightPositionManualInput.val(rightPositionValue);
           settingButtonRightPositionSlider.setValue(rightPositionValue);
-          $("#OpenSettingDialogButtonWrapper").css(
-            "right",
-            rightPositionValue / 10 + "%"
-          );
+          $("#OpenSettingDialogButtonWrapper").css("right", rightPositionValue / 10 + "%");
         },
       });
       settingButtonTopPositionSlider.listen("MDCSlider:input", (event) => {
         jQ_SettingButtonTopPositionManualInput.val(event.detail.value);
-        $("#OpenSettingDialogButtonWrapper").css(
-          "top",
-          event.detail.value / 10 + "%"
-        );
+        $("#OpenSettingDialogButtonWrapper").css("top", event.detail.value / 10 + "%");
       });
       jQ_SettingButtonTopPositionManualInput.on({
         input: () => {
@@ -819,10 +734,7 @@ let SingletonData = (() => {
           topPositionValue = topPositionValue > 1000 ? 1000 : topPositionValue;
           jQ_SettingButtonTopPositionManualInput.val(topPositionValue);
           settingButtonTopPositionSlider.setValue(topPositionValue);
-          $("#OpenSettingDialogButtonWrapper").css(
-            "top",
-            topPositionValue / 10 + "%"
-          );
+          $("#OpenSettingDialogButtonWrapper").css("top", topPositionValue / 10 + "%");
         },
       });
 
@@ -856,19 +768,15 @@ let SingletonData = (() => {
 
       skipChargeSwitch.checked = currentSettings.skipCharge;
       autoPlayChangeSwitch.checked = currentSettings.autoPlayChange;
-      singleVideoAutoPlayRecommendSwitch.checked =
-        currentSettings.singleVideoAutoPlayRecommend;
-      multipartVideoAutoPlaySwitch.checked =
-        currentSettings.multipartVideoAutoPlay;
-      multipartVideoAutoPlayRecommendSwitch.checked =
-        currentSettings.multipartVideoAutoPlayRecommend;
+      singleVideoAutoPlayRecommendSwitch.checked = currentSettings.singleVideoAutoPlayRecommend;
+      multipartVideoAutoPlaySwitch.checked = currentSettings.multipartVideoAutoPlay;
+      multipartVideoAutoPlayRecommendSwitch.checked = currentSettings.multipartVideoAutoPlayRecommend;
       watchLaterAutoPlaySwitch.checked = currentSettings.watchLaterAutoPlay;
       bangumiAutoPlaySwitch.checked = currentSettings.bangumiAutoPlay;
       let settingButtonOpacity = currentSettings.settingButtonOpacity;
       settingButtonOpacitySlider.setValue(settingButtonOpacity);
       jQ_SettingButtonOpacityManualInput.val(settingButtonOpacity);
-      let settingButtonRightPosition =
-        currentSettings.settingButtonRightPosition;
+      let settingButtonRightPosition = currentSettings.settingButtonRightPosition;
       settingButtonRightPositionSlider.setValue(settingButtonRightPosition);
       jQ_SettingButtonRightPositionManualInput.val(settingButtonRightPosition);
       let settingButtonTopPosition = currentSettings.settingButtonTopPosition;
@@ -885,20 +793,14 @@ let SingletonData = (() => {
         click: () => {
           currentSettings.skipCharge = skipChargeSwitch.checked;
           currentSettings.autoPlayChange = autoPlayChangeSwitch.checked;
-          currentSettings.singleVideoAutoPlayRecommend =
-            singleVideoAutoPlayRecommendSwitch.checked;
-          currentSettings.multipartVideoAutoPlay =
-            multipartVideoAutoPlaySwitch.checked;
-          currentSettings.multipartVideoAutoPlayRecommend =
-            multipartVideoAutoPlayRecommendSwitch.checked;
+          currentSettings.singleVideoAutoPlayRecommend = singleVideoAutoPlayRecommendSwitch.checked;
+          currentSettings.multipartVideoAutoPlay = multipartVideoAutoPlaySwitch.checked;
+          currentSettings.multipartVideoAutoPlayRecommend = multipartVideoAutoPlayRecommendSwitch.checked;
           currentSettings.watchLaterAutoPlay = watchLaterAutoPlaySwitch.checked;
           currentSettings.bangumiAutoPlay = bangumiAutoPlaySwitch.checked;
-          currentSettings.settingButtonOpacity =
-            settingButtonOpacitySlider.getValue();
-          currentSettings.settingButtonRightPosition =
-            settingButtonRightPositionSlider.getValue();
-          currentSettings.settingButtonTopPosition =
-            settingButtonTopPositionSlider.getValue();
+          currentSettings.settingButtonOpacity = settingButtonOpacitySlider.getValue();
+          currentSettings.settingButtonRightPosition = settingButtonRightPositionSlider.getValue();
+          currentSettings.settingButtonTopPosition = settingButtonTopPositionSlider.getValue();
           currentSettings.showSettingButton = showSettingButtonSwitch.checked;
           settingsStorage.saveSettings(currentSettings);
           showMDCSnackbar("设置保存成功");
@@ -987,27 +889,17 @@ let SingletonData = (() => {
         if (mutationRecord.addedNodes.length === 0) {
           return;
         }
-        if (
-          $(".bilibili-player-electric-panel-jump-content").length !== 0 &&
-          currentSettings.skipCharge
-        ) {
+        if ($(".bilibili-player-electric-panel-jump-content").length !== 0 && currentSettings.skipCharge) {
           //console.log(mutationRecord);
           $(".bilibili-player-electric-panel-jump-content")[0].click();
           console.log("跳过充电");
         }
         mutationRecord.addedNodes.forEach((node) => {
-          if (
-            $(node).hasClass("bilibili-player-video-btn-setting") &&
-            currentSettings.autoPlayChange
-          ) {
+          if ($(node).hasClass("bilibili-player-video-btn-setting") && currentSettings.autoPlayChange) {
             if (bangumiRegEx.test(window.location.href)) {
               console.log("处于番剧页面");
-              $("body .bilibili-player-video-btn-setting")[0].dispatchEvent(
-                new Event("mouseover")
-              );
-              $("body .bilibili-player-video-btn-setting")[0].dispatchEvent(
-                new Event("mouseout")
-              );
+              $("body .bilibili-player-video-btn-setting")[0].dispatchEvent(new Event("mouseover"));
+              $("body .bilibili-player-video-btn-setting")[0].dispatchEvent(new Event("mouseout"));
               if (currentSettings.bangumiAutoPlay) {
                 $(
                   "body .bilibili-player-video-btn-setting-right-playtype-content>div>div>label:nth-of-type(1)"
@@ -1076,37 +968,33 @@ let SingletonData = (() => {
         }
         if (watchLaterRegEx.test(window.location.href)) {
           console.log("处于稍后再看页面");
-          let watchLaterListObserver = new MutationObserver(
-            (mutationRecords, instance) => {
-              mutationRecords.forEach((mutationRecord) => {
-                //没有添加节点
-                if (mutationRecord.addedNodes.length === 0) {
-                  return;
-                }
-                mutationRecord.addedNodes.forEach((node) => {
-                  if ($(node).hasClass("player-auxiliary-area")) {
-                    let autoPlayButton = $(node).find(
-                      ".player-auxiliary-autoplay-switch>.bui-switch-input"
-                    );
-                    if (!autoPlayButton.prop("checked")) {
-                      console.log("自动连播处于关闭状态");
-                      if (currentSettings.watchLaterAutoPlay) {
-                        autoPlayButton.click();
-                        console.log("已开启自动连播");
-                      }
-                    } else {
-                      console.log("自动连播处于开启状态");
-                      if (!currentSettings.watchLaterAutoPlay) {
-                        autoPlayButton.click();
-                        console.log("已关闭自动连播");
-                      }
+          let watchLaterListObserver = new MutationObserver((mutationRecords, instance) => {
+            mutationRecords.forEach((mutationRecord) => {
+              //没有添加节点
+              if (mutationRecord.addedNodes.length === 0) {
+                return;
+              }
+              mutationRecord.addedNodes.forEach((node) => {
+                if ($(node).hasClass("player-auxiliary-area")) {
+                  let autoPlayButton = $(node).find(".player-auxiliary-autoplay-switch>.bui-switch-input");
+                  if (!autoPlayButton.prop("checked")) {
+                    console.log("自动连播处于关闭状态");
+                    if (currentSettings.watchLaterAutoPlay) {
+                      autoPlayButton.click();
+                      console.log("已开启自动连播");
                     }
-                    watchLaterListObserver.disconnect();
+                  } else {
+                    console.log("自动连播处于开启状态");
+                    if (!currentSettings.watchLaterAutoPlay) {
+                      autoPlayButton.click();
+                      console.log("已关闭自动连播");
+                    }
                   }
-                });
+                  watchLaterListObserver.disconnect();
+                }
               });
-            }
-          );
+            });
+          });
           watchLaterListObserver.observe(document, {
             childList: true,
             subtree: true,
@@ -1114,9 +1002,7 @@ let SingletonData = (() => {
         } else {
           VIDEO_PAGE_PLAY_LIST_OBJ = playlistObj;
           if (playlistObj.data.length === 1) {
-            let autoPlayButton = $("#reco_list").find(
-              ".next-play .next-button .switch-button"
-            );
+            let autoPlayButton = $("#reco_list").find(".next-play .next-button .switch-button");
             // console.log(playNextList);
             // console.log(autoPlayButton);
             console.log("检测到无分P视频");
@@ -1134,9 +1020,7 @@ let SingletonData = (() => {
               }
             }
           } else {
-            let autoPlayButton = $("#multi_page").find(
-              ".next-button .switch-button"
-            );
+            let autoPlayButton = $("#multi_page").find(".next-button .switch-button");
             // console.log(playNextList);
             // console.log(autoPlayButton);
             // console.log(
@@ -1170,16 +1054,9 @@ let SingletonData = (() => {
         if ($("#multi_page").length === 0) {
           return;
         }
-        if (
-          v2Obj.data.cid ===
-          VIDEO_PAGE_PLAY_LIST_OBJ.data[
-            VIDEO_PAGE_PLAY_LIST_OBJ.data.length - 1
-          ].cid
-        ) {
+        if (v2Obj.data.cid === VIDEO_PAGE_PLAY_LIST_OBJ.data[VIDEO_PAGE_PLAY_LIST_OBJ.data.length - 1].cid) {
           console.log("分P视频最后一P");
-          let autoPlayButton = $("#multi_page").find(
-            ".next-button .switch-button"
-          );
+          let autoPlayButton = $("#multi_page").find(".next-button .switch-button");
           if (!autoPlayButton.hasClass("on")) {
             console.log("自动连播处于关闭状态");
             if (currentSettings.multipartVideoAutoPlayRecommend) {
@@ -1286,12 +1163,8 @@ let SingletonData = (() => {
             </button>
             </div>`
         );
-        let importButton = mdc.ripple.MDCRipple.attachTo(
-          $("#ImportDataButton")[0]
-        );
-        let exportButton = mdc.ripple.MDCRipple.attachTo(
-          $("#ExportDataButton")[0]
-        );
+        let importButton = mdc.ripple.MDCRipple.attachTo($("#ImportDataButton")[0]);
+        let exportButton = mdc.ripple.MDCRipple.attachTo($("#ExportDataButton")[0]);
 
         $("#ImportFileInput").on({
           change: (e) => {
@@ -1399,27 +1272,19 @@ let SingletonData = (() => {
               click: function () {
                 window.open(
                   "https://space.bilibili.com/" +
-                    $(this)
-                      .parentsUntil(".black-list")
-                      .parent()
-                      .find("span.black-btn")
-                      .attr("mid"),
+                    $(this).parentsUntil(".black-list").parent().find("span.black-btn").attr("mid"),
                   "_blank"
                 );
               },
             });
-            let data = blockReasonController.getReason(
-              blackListObj.data.list[index].mid
-            );
+            let data = blockReasonController.getReason(blackListObj.data.list[index].mid);
             removeBtn.on({
               click: () => {
                 $(document).one({
                   relationModifyXHRResponse: (event, resultObj) => {
                     // console.log(resultObj);
                     if (resultObj.code === 0) {
-                      blockReasonController.removeReason(
-                        $(element).attr("mid")
-                      );
+                      blockReasonController.removeReason($(element).attr("mid"));
                       showMDCSnackbar("删除拉黑理由完成");
                     } else {
                       showMDCSnackbar(resultObj.message);
@@ -1441,11 +1306,7 @@ let SingletonData = (() => {
 
               $(div).append("在");
 
-              if (
-                data.url !== undefined &&
-                data.url !== null &&
-                data.url !== ""
-              ) {
+              if (data.url !== undefined && data.url !== null && data.url !== "") {
                 let url = document.createElement("a");
                 url.href = data.url;
                 url.innerHTML = "此页面";
@@ -1467,22 +1328,12 @@ let SingletonData = (() => {
               $(p).on({
                 click: function () {
                   let reason = blockReasonController.getReason(
-                    $(this)
-                      .parentsUntil(".black-list")
-                      .parent()
-                      .find("span.black-btn")
-                      .attr("mid")
+                    $(this).parentsUntil(".black-list").parent().find("span.black-btn").attr("mid")
                   );
                   //   console.log(reason);
-                  $("#blackReasonDialog")
-                    .find("h2#blackReasonDialogTitle>a")
-                    .html(decodeURIComponent(reason.url));
-                  $("#blackReasonDialog")
-                    .find("h2#blackReasonDialogTitle>a")
-                    .attr("href", reason.url);
-                  $("#blackReasonDialog")
-                    .find("div#blackDetails")
-                    .html(reason.content);
+                  $("#blackReasonDialog").find("h2#blackReasonDialogTitle>a").html(decodeURIComponent(reason.url));
+                  $("#blackReasonDialog").find("h2#blackReasonDialogTitle>a").attr("href", reason.url);
+                  $("#blackReasonDialog").find("div#blackDetails").html(reason.content);
                   MDCDialog.open();
                 },
               });
@@ -1503,12 +1354,8 @@ let SingletonData = (() => {
           return;
         }
         mutation.addedNodes.forEach((node) => {
-          let blackOperationLi = $(node).find(
-            "div.h-action>div.h-add-to-black>ul>li:nth-of-type(1)"
-          );
-          let blackOperationUl = $(node).find(
-            "div.h-action>div.h-add-to-black>ul"
-          );
+          let blackOperationLi = $(node).find("div.h-action>div.h-add-to-black>ul>li:nth-of-type(1)");
+          let blackOperationUl = $(node).find("div.h-action>div.h-add-to-black>ul");
           let followButton = $(node).find("div.h-action>span.h-unfollow");
           if (blackOperationLi[0]) {
             if (blackOperationLi.html().includes("加入黑名单")) {
@@ -1611,12 +1458,8 @@ let SingletonData = (() => {
               relationModifyXHRResponse: (event, resultObj) => {
                 // console.log(resultObj);
                 if (resultObj.code === 0) {
-                  let blackOperationLi = $(document).find(
-                    "div.h-action>div.h-add-to-black>ul>li:nth-of-type(1)"
-                  );
-                  let followButton = $(document).find(
-                    "div.h-action>span.h-follow"
-                  );
+                  let blackOperationLi = $(document).find("div.h-action>div.h-add-to-black>ul>li:nth-of-type(1)");
+                  let followButton = $(document).find("div.h-action>span.h-follow");
                   blackOperationLi.off("click");
                   followButton.off("click");
                   blackOperationLi.on({
@@ -1643,9 +1486,7 @@ let SingletonData = (() => {
         relationModifyXHRResponse: (event, resultObj) => {
           //   console.log(resultObj);
           if (resultObj.code === 0) {
-            let blackOperationLi = $(document).find(
-              "div.h-action>div.h-add-to-black>ul>li:nth-of-type(1)"
-            );
+            let blackOperationLi = $(document).find("div.h-action>div.h-add-to-black>ul>li:nth-of-type(1)");
             let followButton = $(document).find("div.h-action>span.h-follow");
             blackOperationLi.off("click");
             followButton.off("click");
