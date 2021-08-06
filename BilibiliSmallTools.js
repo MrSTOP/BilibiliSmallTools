@@ -1,12 +1,12 @@
 // ==UserScript==
 // @name               哔哩哔哩 小功能
 // @namespace          https://github.com/MrSTOP
-// @version            0.5.2.0
+// @version            0.5.2.1
 // @description        记录为什么屏蔽了此人，支持导入导出。添加自动跳过充电页面功能，调整B站恶心的自动连播功能
 // @author             MrSTOP
 // @license            GPLv3
 // @run-at             document-start
-// @match              https://account.bilibili.com/account/blacklist
+// @match              https://account.bilibili.com/account/*
 // @match              https://www.bilibili.com/bangumi/*
 // @match              https://www.bilibili.com/video/*
 // @match              https://space.bilibili.com/*
@@ -387,7 +387,7 @@ let SingletonData = (() => {
       "}" +
       ".bilibili-small-tools-setting-button:hover{opacity:1}"
   );
-  let blackListRegEx = /https\:\/\/account\.bilibili\.com\/account\/blacklist/;
+  let personalCenterRegEx = /https\:\/\/account\.bilibili\.com\/account\/.+/;
   let spaceRegEx = /https:\/\/space\.bilibili\.com\/[0-9]+/;
   let watchLaterRegEx = /https\:\/\/www\.bilibili\.com\/medialist\/play\/watchlater\/.+/;
   let bangumiRegEx = /https\:\/\/www\.bilibili\.com\/bangumi\/.+/;
@@ -1523,7 +1523,7 @@ let SingletonData = (() => {
       //   blockReason.addReason(mid, url, "barrage", content);
     }
   }
-  if (blackListRegEx.test(window.location.href)) {
+  if (personalCenterRegEx.test(window.location.href)) {
     onManagePage();
   } else if (spaceRegEx.test(window.location.href)) {
     onSpacePage();
