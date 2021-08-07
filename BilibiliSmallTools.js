@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name               哔哩哔哩 小功能
 // @namespace          https://github.com/MrSTOP
-// @version            0.5.2.1
+// @version            0.5.2.2
 // @description        记录为什么屏蔽了此人，支持导入导出。添加自动跳过充电页面功能，调整B站恶心的自动连播功能
 // @author             MrSTOP
 // @license            GPLv3
@@ -1330,6 +1330,10 @@ let SingletonData = (() => {
                   let reason = blockReasonController.getReason(
                     $(this).parentsUntil(".black-list").parent().find("span.black-btn").attr("mid")
                   );
+                  if (reason === undefined || reason === null) {
+                    showMDCSnackbar("没有找到拉黑原因，可能已被移除黑名单，请刷新页面");
+                    return;
+                  }
                   //   console.log(reason);
                   $("#blackReasonDialog").find("h2#blackReasonDialogTitle>a").html(decodeURIComponent(reason.url));
                   $("#blackReasonDialog").find("h2#blackReasonDialogTitle>a").attr("href", reason.url);
@@ -1407,6 +1411,10 @@ let SingletonData = (() => {
         blackReasonButton.on({
           click: () => {
             let blockReason = blockReasonController.getReason(mid);
+            if (blockReason === undefined || blockReason === null) {
+              showMDCSnackbar("没有找到拉黑原因信息，该用户已被移除黑名单或是在未使用脚本时拉黑的");
+              return;
+            }
             $("#blackUrlInput").val(blockReason.url);
             $("#blackReasonTextArea").val(blockReason.content);
             MDCDialog.open();
