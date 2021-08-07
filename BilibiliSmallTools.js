@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name               哔哩哔哩 小功能
 // @namespace          https://github.com/MrSTOP
-// @version            0.5.2.2
+// @version            0.5.3.1
 // @description        记录为什么屏蔽了此人，支持导入导出。添加自动跳过充电页面功能，调整B站恶心的自动连播功能
 // @author             MrSTOP
 // @license            GPLv3
@@ -11,6 +11,7 @@
 // @match              https://www.bilibili.com/video/*
 // @match              https://space.bilibili.com/*
 // @match              https://www.bilibili.com/medialist/play/watchlater/*
+// @match              https://www.bilibili.com/read/*
 // @grant              GM_getValue
 // @grant              GM_setValue
 // @grant              GM_addValueChangeListener
@@ -391,6 +392,7 @@ let SingletonData = (() => {
   let spaceRegEx = /https:\/\/space\.bilibili\.com\/[0-9]+/;
   let watchLaterRegEx = /https\:\/\/www\.bilibili\.com\/medialist\/play\/watchlater\/.+/;
   let bangumiRegEx = /https\:\/\/www\.bilibili\.com\/bangumi\/.+/;
+  let articleRegEx = /https\:\/\/www\.bilibili\.com\/read\/.+/;
   let midFromSpaceUrlRegEx = /[0-9]+/;
 
   function injectMDCSnackbar() {
@@ -1310,6 +1312,7 @@ let SingletonData = (() => {
                 let url = document.createElement("a");
                 url.href = data.url;
                 url.innerHTML = "此页面";
+                url.target = "_blank";
                 $(div).append(url);
               } else {
                 $(div).append("未知页面");
@@ -1531,10 +1534,119 @@ let SingletonData = (() => {
       //   blockReason.addReason(mid, url, "barrage", content);
     }
   }
+
+  function onArticlePage() {
+    let observer = new MutationObserver((mutationRecords, instance) => {
+      mutationRecords.forEach((mutationRecord) => {
+        //没有添加节点
+        if (mutationRecord.addedNodes.length === 0) {
+          return;
+        }
+        mutationRecord.addedNodes.forEach((node) => {
+          if ($(node).hasClass("list-item") || $(node).hasClass("reply-item")) {
+            // console.log($(node));
+            let blackButtons = $(node).find(
+              "div.con>div.info>div.operation>div.opera-list>ul>li.blacklist,div.info>div.operation>div.opera-list>ul>li.blacklist"
+            );
+            // console.log(blackButton);
+            blackButtons.on({
+              click: blackButtonClickHandler,
+            });
+          }
+          if ($(node).hasClass("comment-bilibili-blacklist")) {
+            $(node).find("a.blacklist-confirm").on({
+              click: confirmBlackClickHandler,
+            });
+          }
+        });
+      });
+    });
+    observer.observe(document, {
+      childList: true,
+      subtree: true,
+    });
+
+    $("body").ready(() => {
+      injectMDCSnackbar();
+    });
+
+    let lastCommentUser = null;
+    function blackButtonClickHandler(event) {
+      let parents = $(event.target).parentsUntil(".list-item");
+      let root = null;
+      let text = null;
+      let type = null;
+      if (parents.length === 5) {
+        // comment
+        type = "comment";
+        root = parents[4];
+        text = root.querySelector(".text").innerText;
+      } else if (parents.length === 7) {
+        type = "comment-in-comment";
+        root = parents[4];
+        text = root.querySelector(".text-con").innerText;
+      }
+
+      if (root === null) {
+        console.log(parents);
+        showMDCSnackbar("发生错误");
+        return;
+      }
+      let a = root.querySelector(".user a");
+      let userId = a.dataset.usercardMid;
+      let userName = a.innerText;
+      let commentData = {
+        userId: userId,
+        userName: userName,
+        content: text,
+        type: type,
+      };
+      //   console.log(text);
+      //   console.log(type);
+      //   console.log(commentData);
+      lastCommentUser = commentData;
+      showMDCSnackbar("用户评论信息解析完成");
+    }
+    function confirmBlackClickHandler() {
+      if (lastCommentUser !== null) {
+        // console.log("lastCommentUser");
+        // console.log(lastCommentUser);
+        let url = window.location.href;
+        $(document).one({
+          relationModifyXHRResponse: (event, resultObj) => {
+            // console.log(resultObj);
+            if (resultObj.code === 0) {
+              showMDCSnackbar(
+                [
+                  xmlEscape(`Blocked ${lastCommentUser.userName}`),
+                  xmlEscape(`Id: ${lastCommentUser.userId}`),
+                  xmlEscape("Reason:"),
+                  xmlEscape(lastCommentUser.content),
+                ].join("<br>")
+              );
+              blockReasonController.addReason(
+                lastCommentUser.userId,
+                url,
+                lastCommentUser.type,
+                lastCommentUser.content
+              );
+            } else {
+              showMDCSnackbar(resultObj.message);
+            }
+          },
+        });
+      } else {
+        showMDCSnackbar("添加拉黑理由失败</br>lastCommentUser为null");
+      }
+    }
+  }
+
   if (personalCenterRegEx.test(window.location.href)) {
     onManagePage();
   } else if (spaceRegEx.test(window.location.href)) {
     onSpacePage();
+  } else if (articleRegEx.test(window.location.href)) {
+    onArticlePage();
   } else {
     onVideoPage();
   }
