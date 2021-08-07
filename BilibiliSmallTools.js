@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name               哔哩哔哩 小功能
 // @namespace          https://github.com/MrSTOP
-// @version            0.5.3.1
+// @version            0.6.0.1
 // @description        记录为什么屏蔽了此人，支持导入导出。添加自动跳过充电页面功能，调整B站恶心的自动连播功能
 // @author             MrSTOP
 // @license            GPLv3
