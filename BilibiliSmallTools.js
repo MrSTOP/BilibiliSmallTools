@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name               哔哩哔哩 小功能
 // @namespace          https://github.com/MrSTOP
-// @version            0.6.0.1
+// @version            0.7.0.0
 // @description        记录为什么屏蔽了此人，支持导入导出。添加自动跳过充电页面功能，调整B站恶心的自动连播功能
 // @author             MrSTOP
 // @license            GPLv3
@@ -61,57 +61,45 @@
   require("greasemonkey");
 })();
 
-let SingletonData = (() => {
-  let names = new Set();
-  class SingletonData {
-    constructor(key, defaultValue = null) {
-      if (typeof key !== "string") throw "key must be string";
-      if (!key) throw "key cannot be empty";
-      if (names.has(key)) throw `SingletonData <${key}> is created.`;
-      names.add(key);
-
-      const unset = {};
-      let data = unset;
-      let isDisposed = false;
-
-      function ensureSafe() {
-        if (isDisposed) throw "object is disposed.";
-      }
-
-      Object.defineProperty(this, "data", {
-        get: () => {
-          ensureSafe();
-          if (data === unset) {
-            data = GM_getValue(key, defaultValue);
-          }
-          return data;
-        },
-        set: (value) => {
-          ensureSafe();
-          data = value;
-          GM_setValue(key, value);
-        },
-      });
-
-      this.save = () => {
-        ensureSafe();
-        GM_setValue(key, data);
-      };
-
-      const listenerId = GM_addValueChangeListener(key, (_, oldValue, newValue, remote) => {
-        if (!remote) return;
-        data = newValue;
-      });
-      this.dispose = () => {
-        isDisposed = true;
-        GM_removeValueChangeListener(listenerId);
-        names.delete(key);
-      };
+class SingletonDataStorage {
+  constructor(key, defaultValue = null) {
+    if (typeof key !== "string") {
+      throw "Key not string";
     }
-  }
+    if (!key) {
+      throw "key is empty";
+    }
 
-  return SingletonData;
-})();
+    const unset = {};
+    let data = unset;
+
+    Object.defineProperty(this, "data", {
+      get: () => {
+        if (data === unset) {
+          data = GM_getValue(key, defaultValue);
+        }
+        return data;
+      },
+      set: (value) => {
+        data = value;
+        GM_setValue(key, value);
+      },
+    });
+
+    this.save = () => {
+      GM_setValue(key, data);
+    };
+
+    const listenerId = GM_addValueChangeListener(key, (_, oldValue, newValue, remote) => {
+      if (!remote) return;
+      //数据从其他标签页修改
+      data = newValue;
+    });
+    this.dispose = () => {
+      GM_removeValueChangeListener(listenerId);
+    };
+  }
+}
 
 (function () {
   "use strict";
@@ -142,16 +130,8 @@ let SingletonData = (() => {
   GM_addStyle(GM_getResourceText("material-component-web"));
   class BlockController {
     constructor() {
-      this._singletonData = new SingletonData("blocked-reasons", {});
+      this._singletonData = new SingletonDataStorage("blocked-reasons", {});
     }
-
-    // blockUser(userId, url, type, content) {
-    //   if (Bilibili.badlistUser === undefined) {
-    //     throw "API error";
-    //   }
-    //   Bilibili.badlistUser("", userId, () => {});
-    //   this.addReason(userId, url, type, content);
-    // }
 
     addReason(userId, url, type, content, autoSave = true) {
       let data = {
@@ -186,69 +166,6 @@ let SingletonData = (() => {
       elem.click();
       document.body.removeChild(elem);
     }
-
-    // canImport() {
-    //   return Bilibili && typeof Bilibili.badlistUser === "function";
-    // }
-
-    // _ServerSiteBlockAsync(id) {
-    //   return new Promise((resolve, reject) => {
-    //     Bilibili.badlistUser("", id, (e) => {
-    //       console.log(e);
-    //       resolve(e.code === 0);
-    //     });
-    //   });
-    // }
-
-    // async import(content) {
-    //   let data = null;
-    //   try {
-    //     data = JSON.parse(content);
-    //   } catch (_) {
-    //     toastr.info("This is not a vaild json file.");
-    //   }
-
-    //   let hasError = false;
-    //   if (data) {
-    //     let added = 0;
-    //     let exists = 0;
-    //     let errors = 0;
-    //     let values = Object.values(data);
-    //     for (let i = 0; i < values.length; i++) {
-    //       let z = values[i];
-    //       if (
-    //         "string" === typeof z.key &&
-    //         "string" === typeof z.url &&
-    //         "string" === typeof z.type &&
-    //         "string" === typeof z.content
-    //       ) {
-    //         if (this.getReason(z.key) === null) {
-    //           if (await this._ServerSiteBlockAsync(z.key)) {
-    //             this.addReason(z.key, z.url, z.type, z.content);
-    //             added++;
-    //           } else {
-    //             errors++;
-    //           }
-    //         } else {
-    //           exists++;
-    //         }
-    //       }
-    //     }
-
-    //     if (added + errors + exists > 0) {
-    //       toastr.info(
-    //         [
-    //           `Total imported ${added + errors + exists} items,`,
-    //           `added ${added}, exists ${exists}, error ${errors}.`,
-    //         ].join("<br>")
-    //       );
-    //       return;
-    //     }
-    //   }
-
-    //   toastr.info(`No items has be imported.`);
-    // }
-
     _ServerSiteBlockAsync2(id) {
       return new Promise((resolve, reject) => {
         $.ajax({
@@ -339,7 +256,7 @@ let SingletonData = (() => {
   }
   class SettingsStorage {
     constructor() {
-      this._singletonData = new SingletonData("bilibili-small-tools-settings", DEFAULT_SETTING);
+      this._singletonData = new SingletonDataStorage("bilibili-small-tools-settings", DEFAULT_SETTING);
     }
 
     saveSettings(newSettings) {

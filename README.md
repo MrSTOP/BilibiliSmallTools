@@ -1,4 +1,8 @@
-修复[哔哩哔哩 为什么拉黑](https://greasyfork.org/zh-CN/scripts/31615-bilibili-why-blocked)脚本，增加用户空间页拉黑添加原因功能，并添加一些小功能(自动跳过充电页面，单P视频是否自动播放推荐视频，多P视频是否自动播放分P，多P视频是否自动播放推荐视频，番剧是否自动连播，稍后再看是否自动连播)，可能有BUG。
+拉黑功能实现借鉴自[哔哩哔哩 为什么拉黑](https://greasyfork.org/zh-CN/scripts/31615-bilibili-why-blocked)脚本，并进行重写，增加用户空间页拉黑添加原因功能，并添加一些小功能(自动跳过充电页面，单P视频是否自动播放推荐视频，多P视频是否自动播放分P，多P视频是否自动播放推荐视频，番剧是否自动连播，稍后再看是否自动连播)，可能有BUG。
+
+数据存储功能借鉴自[SingletonData.js](https://greasyfork.org/scripts/31539-singletondata/code/SingletonData.js)
+
+**感谢以上脚本作者**
 
 [项目地址](https://github.com/MrSTOP/BilibiliSmallTools)
 
@@ -11,6 +15,8 @@
 **PPS:只要显示如下信息应该是拉黑成功了，点取消关掉对话框就行了**
 
 ![拉黑提示信息](./VideoBlockInfo.jpg)
+
+**0.7.0.0 移除已被注释的属于原脚本[哔哩哔哩 为什么拉黑](https://greasyfork.org/zh-CN/scripts/31615-bilibili-why-blocked)的未授权代码**
 
 **0.6.0.1 增加专栏区拉黑用户记录功能，调整  在"此页面"拉黑  链接打开方式为新标签页中打开**
 
@@ -32,7 +38,7 @@
 
 评论区拉黑会记录被拉黑用户评论及评论所在网址
 
-![评论区拉黑示意图](./CommentBlock.png)
+![评论区拉黑示意图](./CommentBlock.jpg)
 
 
 用户空间拉黑会记录进入用户空间前的网址并可以填写及查看原因
